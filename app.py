@@ -6,7 +6,7 @@ import base64
 import io
 import datetime
 
-# 1. HARDCODETER API KEY
+# 1. HARDCODETER API KEY (Frisch & Aktiv)
 FESTER_API_KEY = "sk-proj-VC0P5MOPeotJSISZshXYEaePtQYCyuqYNuMQGj9N1I-eLkdjwr4lNV-tSKjKSbsJ"
 
 st.set_page_config(page_title="iPad Premium OS Workspace", page_icon="📲", layout="wide")
@@ -50,7 +50,7 @@ if "chat_history_fitness" not in st.session_state:
 if "chat_history_lernen" not in st.session_state: 
     st.session_state.chat_history_lernen = []
 
-# --- STREAK-VERLUST-LOGIK ---
+# --- STREAK-VERLUST-LOGIK (Automatischer Check auf Inaktivität) ---
 heute = datetime.date.today()
 if (heute - st.session_state.last_fit_log).days >= 2:
     st.session_state.fit_streak = 0
@@ -74,7 +74,7 @@ with st.sidebar:
         st.session_state.klassenstufe = st.selectbox("Klassenstufe:", [f"{i}. Klasse" for i in range(5, 13)], index=5)
         
     st.divider()
-    st.markdown("### 🎨 100+ Farbstudio (Einfarbig)")
+    st.markdown("### 🎨 100+ Farbstudio (RGB Mixer)")
     
     farb_modus = st.radio("Wie willst du die Farbe wählen?", ["🎛️ Eigener RGB-Mixer", "📌 Beliebte Presets"])
     
@@ -91,10 +91,7 @@ with st.sidebar:
             "🔮 Neon Violett": "#9d00ff", 
             "🔥 Neon Orange": "#ff5f1f", 
             "🐬 Neon Türkis": "#00f5ff", 
-            "🛍️ Neon Pink": "#ff1493",
-            "🍇 Pflaume (Mischung)": "#4a0e4e", 
-            "🍓 Erdbeere (Mischung)": "#ff6b8b", 
-            "🪸 Koralle (Mischung)": "#ff7f50"
+            "🛍️ Neon Pink": "#ff1493"
         }
         wahl = st.selectbox("Preset wählen:", list(presets.keys()))
         st.session_state.custom_color = presets[wahl]
@@ -112,94 +109,4 @@ st.markdown(f"""
     </style>
 """, unsafe_allow_html=True)
 
-# --- RECHNER-LOGIK FÜR SICH LEERENDE EINGABEFELDER ---
-def food_eingabe_callback():
-    text = st.session_state.food_eingabe_key
-    if text:
-        st.session_state.ki_fitness_gedaechtnis.append(f"Eintrag ({heute.strftime('%H:%M')}): {text}")
-        st.toast(f"🍕 KI hat sich gemerkt: '{text}'")
-        st.session_state.food_eingabe_key = ""
-
-def lern_eingabe_callback():
-    text = st.session_state.lern_eingabe_key
-    if text:
-        st.session_state.ki_lern_gedaechtnis.append(f"Gelernt ({heute.strftime('%H:%M')}): {text}")
-        st.toast(f"📚 KI hat gelernt: '{text}'")
-        st.session_state.lern_eingabe_key = ""
-
-# --- BEREICH 1: FITNESS (ATHLETE PRO) ---
-if modus == "🏋️‍♂️ ATHLETE PRO":
-    st.title("🏋️‍♂️ ATHLETE PRO Dashboard")
-    st.caption(f"🧬 Profil: {st.session_state.alter} Jahre | {st.session_state.gewicht}kg | {st.session_state.groesse}cm")
-    
-    k1, k2 = st.columns(2)
-    with k1:
-        st.metric("🔥 Aktueller Sport-Streak", f"{st.session_state.fit_streak} Tage")
-        if st.button("🗑️ Sportcounter auf 0 zurücksetzen", use_container_width=True):
-            st.session_state.fit_streak = 0
-            st.rerun()
-    with k2:
-        if (heute - st.session_state.last_video_upload).days >= 7:
-            st.warning("🚨 NACHRICHT VOM COACH: Du hast seit einer Woche kein Beweisvideo mehr hochgeladen! Los, zieh durch! 🦾")
-        else:
-            st.success("✅ Dein Video-Status ist für diese Woche aktiv.")
-
-    st.divider()
-    st.markdown("### 🥤 All-in-One Schnelleingabe (Essen, Getränke & Sport)")
-    st.caption("Tippe es ein und drücke Enter. Das Feld leert sich, die KI speichert es im Tagesgedächtnis.")
-    st.text_input("Was hast du zu dir genommen / getan?", key="food_eingabe_key", on_change=food_eingabe_callback)
-
-    st.divider()
-    st.markdown("### 📹 Video-Beweispflicht (Min. 5 Minuten)")
-    video_file = st.file_uploader("Trainingsvideo auswählen...", type=["mp4", "mov", "avi"])
-    if video_file is not None:
-        st.info("⏱ Video wird auf Mindestlänge von 5 Minuten geprüft...")
-        if st.button("✅ Video-Prüfung bestätigen & Streak erhöhen"):
-            st.session_state.fit_streak += 1
-            st.session_state.last_fit_log = heute
-            st.session_state.last_video_upload = heute
-            st.success("🎉 Video akzeptiert (> 5 Min)! Streak gesichert.")
-            st.rerun()
-
-    st.divider()
-    st.markdown("### 📸 Personalisierter KI-Scanner")
-    fit_option = st.selectbox("Scan-Typ:", ["Trainingsplan (auf mein Gewicht angepasst)", "Kalorien-Check von Fotos", "Technik-Fehleranalyse"])
-    uploaded_file = st.file_uploader("Foto hochladen...", type=["jpg", "png", "jpeg"], key="fit_up")
-    if uploaded_file and st.button("🚀 Foto sportwissenschaftlich auswerten"):
-        client = OpenAI(api_key=FESTER_API_KEY)
-        with st.spinner("Dein Trainer wertet aus..."):
-            img_str = base64.b64encode(uploaded_file.getvalue()).decode()
-            prompt = f"Nutzerdaten: {st.session_state.alter}J, {st.session_state.gewicht}kg, {st.session_state.groesse}cm. Analysiere das Bild für '{fit_option}' exakt passend zu diesen Körperdaten auf Deutsch."
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
-                messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}]}],
-            )
-            st.info(response.choices[0].message.content)
-
-    st.divider()
-    st.markdown("### 💬 Chat mit deinem Personal Trainer")
-    for msg in st.session_state.chat_history_fitness:
-        with st.chat_message(msg["role"]): 
-            st.write(msg["content"])
-    u_input = st.chat_input("Frage den Coach...")
-    if u_input:
-        st.session_state.chat_history_fitness.append({"role": "user", "content": u_input})
-        client = OpenAI(api_key=FESTER_API_KEY)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "system", "content": f"Du bist ein Fitness-Coach. Beachte die Nutzerdaten: {st.session_state.gewicht}kg, {st.session_state.alter}Jahre."}] + st.session_state.chat_history_fitness[-6:]
-        )
-        st.session_state.chat_history_fitness.append({"role": "assistant", "content": response.choices[0].message.content})
-        st.rerun()
-
-# --- BEREICH 2: SCHULE (CAMPUS EXPERT) ---
-elif modus == "🎓 CAMPUS EXPERT":
-    st.title("🎓 CAMPUS EXPERT Dashboard")
-    st.caption(f"🎯 Niveau eingestellt auf: {st.session_state.klassenstufe}")
-    
-    k1, k2 = st.columns(2)
-    with k1:
-        st.metric("⚡ Aktueller Lern-Streak", f"{st.session_state.lern_streak} Tage")
-        if st.button("🗑️ Lerncounter auf 0 zurücksetzen", use_container_width=True):
-            st.session_state.lern_streak = 0
-            st.rerun()
+# --- RECHNER-LOGIK FÜR SICH LEERENDE EINGABEFELDER (All-in-One &
