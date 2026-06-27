@@ -20,7 +20,16 @@ if "klassenstufe" not in st.session_state: st.session_state.klassenstufe = "10. 
 if "fit_streak" not in st.session_state: st.session_state.fit_streak = 3
 if "gelöste_aufgaben" not in st.session_state: st.session_state.gelöste_aufgaben = 0
 if "bg_design" not in st.session_state: st.session_state.bg_design = "Standard Grau"
-if "icon_ordnung" not in st.session_state: st.session_state.icon_ordnung = ["Status-Kacheln", "Scanner", "Live-Chat"]
+if "icon_ordnung" not in st.session_state: st.session_state.icon_ordnung = ["Status-Kacheln", "Ernährungs-Raster", "Nährwert-Tabelle", "Scanner", "Live-Chat"]
+
+# Eingabe-Speicher für das Ernährungs-Raster
+if "food_diary" not in st.session_state:
+    st.session_state.food_diary = {
+        "Frühstück": {"Name": "", "Kalorien": 0, "Protein": 0},
+        "Mittagessen": {"Name": "", "Kalorien": 0, "Protein": 0},
+        "Abendessen": {"Name": "", "Kalorien": 0, "Protein": 0},
+        "Snacks / Shakes": {"Name": "", "Kalorien": 0, "Protein": 0}
+    }
 
 # Chat-Speicher
 if "chat_history_fitness" not in st.session_state: st.session_state.chat_history_fitness = []
@@ -53,8 +62,12 @@ with st.sidebar:
     st.session_state.bg_design = st.radio("Hintergrundbild / Thema:", ["Standard Grau", "Dark Carbon", "Gym Vibe (Neon)", "Campus Hell"])
     
     st.markdown("🔄 **Widgets verschieben:**")
-    reihenfolge = st.multiselect("Reihenfolge der Dashboard-Elemente:", ["Status-Kacheln", "Scanner", "Live-Chat"], default=st.session_state.icon_ordnung)
-    if len(reihenfolge) == 3:
+    reihenfolge = st.multiselect(
+        "Reihenfolge der Dashboard-Elemente:", 
+        ["Status-Kacheln", "Ernährungs-Raster", "Nährwert-Tabelle", "Scanner", "Live-Chat"], 
+        default=st.session_state.icon_ordnung
+    )
+    if len(reihenfolge) >= 3:
         st.session_state.icon_ordnung = reihenfolge
 
 # --- BEREICH 1: FITNESS ---
@@ -62,7 +75,7 @@ if modus == "🏋️‍♂️ ATHLETE PRO":
     st.title("🏋️‍♂️ ATHLETE PRO Dashboard")
     st.caption(f"Profil aktiv: {st.session_state.alter} Jahre | {st.session_state.gewicht}kg | {st.session_state.groesse}cm")
     
-    # Widgets dynamisch nach User-Reihenfolge anzeigen (Homescreen-Feature)
+    # Widgets dynamisch nach User-Reihenfolge anzeigen
     for widget in st.session_state.icon_ordnung:
         if widget == "Status-Kacheln":
             st.markdown("#### 📊 Live-Widgets")
@@ -74,6 +87,52 @@ if modus == "🏋️‍♂️ ATHLETE PRO":
                 st.toast("🔥 Streak erhöht! Schau in dein Pokal-Menü!")
                 st.rerun()
                 
+        elif widget == "Ernährungs-Raster":
+            st.divider()
+            st.markdown("### 🍳 Dein Tages-Ernährungsplan (Eingabe-Raster)")
+            st.caption("Trage hier ein, was du heute gegessen hast. Die App rechnet deine Gesamtsumme aus!")
+            
+            total_kcal = 0
+            total_protein = 0
+            
+            # Raster-Layout für Mahlzeiten erzeugen
+            for mahlzeit, daten in st.session_state.food_diary.items():
+                c_name, c_kcal, c_protein = st.columns([2, 1, 1])
+                with c_name:
+                    st.session_state.food_diary[mahlzeit]["Name"] = st.text_input(f"{mahlzeit} (Was hast du gegessen?)", value=daten["Name"], key=f"name_{mahlzeit}")
+                with c_kcal:
+                    st.session_state.food_diary[mahlzeit]["Kalorien"] = st.number_input("Kalorien (kcal)", value=daten["Kalorien"], step=10, key=f"kcal_{mahlzeit}")
+                with c_protein:
+                    st.session_state.food_diary[mahlzeit]["Protein"] = st.number_input("Protein (g)", value=daten["Protein"], step=1, key=f"prot_{mahlzeit}")
+                
+                # Werte aufsummieren, wenn etwas eingetragen ist
+                if daten["Name"]:
+                    total_kcal += st.session_state.food_diary[mahlzeit]["Kalorien"]
+                    total_protein += st.session_state.food_diary[mahlzeit]["Protein"]
+            
+            # Auswertung des Rasters
+            st.markdown("#### 📈 Heutige Tagesbilanz:")
+            res_c1, res_c2 = st.columns(2)
+            res_c1.metric("🔥 Gesamtkalorien", f"{total_kcal} kcal")
+            res_c2.metric("🍗 Gesamtprotein", f"{total_protein} g Eiweiß")
+            
+        elif widget == "Nährwert-Tabelle":
+            st.divider()
+            st.markdown("### 📋 Fitness-Lebensmittel & Nährwerte (pro 100g)")
+            st.caption("Nutze diese Liste, um die Werte für dein Ernährungs-Raster oben schnell nachzuschlagen.")
+            
+            # Übersichtliches Raster für Nährwerte
+            naehrwerte_liste = [
+                {"Lebensmittel": "🍗 Hähnchenbrustfilet", "Kalorien": "110 kcal", "Protein": "23g", "Kohlenhydrate": "0g", "Fett": "1g"},
+                {"Lebensmittel": "🥣 Haferflocken", "Kalorien": "370 kcal", "Protein": "13g", "Kohlenhydrate": "59g", "Fett": "7g"},
+                {"Lebensmittel": "🥛 Magerquark", "Kalorien": "68 kcal", "Protein": "12g", "Kohlenhydrate": "4g", "Fett": "0.2g"},
+                {"Lebensmittel": "🍚 Basmati-Reis (ungekocht)", "Kalorien": "350 kcal", "Protein": "8g", "Kohlenhydrate": "77g", "Fett": "1g"},
+                {"Lebensmittel": "🥚 Ei (1 Stück / ca. 55g)", "Kalorien": "80 kcal", "Protein": "7g", "Kohlenhydrate": "0.5g", "Fett": "6g"},
+                {"Lebensmittel": "🐟 Lachsfilet", "Kalorien": "200 kcal", "Protein": "20g", "Kohlenhydrate": "0g", "Fett": "13g"},
+                {"Lebensmittel": "🍌 Banane (1 Stück)", "Kalorien": "95 kcal", "Protein": "1g", "Kohlenhydrate": "22g", "Fett": "0.3g"},
+            ]
+            st.table(naehrwerte_liste)
+
         elif widget == "Scanner":
             st.divider()
             st.markdown("### 📸 Personalisierter KI-Scanner")
