@@ -5,117 +5,118 @@ import os
 import base64
 import io
 
-# Seitenkonfiguration für deine Fitness-App
-st.set_page_config(page_title="iPad Fitness-App", page_icon="💪", layout="wide")
-
-# --- HIER DEINEN SCHLÜSSEL FEST EINTRAGEN ---
+# 1. HARDCODETER API KEY (Dauerhaft aktiv)
 FESTER_API_KEY = "sk-proj-VC0P5MOPeotJSISZshXYEaePtQYCyuqYNuMQGj9N1I-eLkdjwr4lNV-tSKjKSbsJ"
 
-# App-Titel auf dem Hauptbildschirm
-st.title("💪 iPad Foto-zu-Fitness App")
-st.caption("Fotografiere Lebensmittel, Übungen oder Pläne und lass die KI deinen Fitnesstag strukturieren!")
+# Seiten-Konfiguration
+st.set_page_config(page_title="iPad Super-App", page_icon="🚀", layout="wide")
 
-# Ordner für den Verlauf erstellen
-if not os.path.exists("meine_fitness_plaene"):
-    os.makedirs("meine_fitness_plaene")
+# Ordner-Struktur für beide Bereiche
+for pfad in ["verlauf_fitness", "verlauf_lernen"]:
+    if not os.path.exists(pfad):
+        os.makedirs(pfad)
 
-# --- SEITENLEISTE (SIDEBAR) FÜR EINSTELLUNGEN ---
+# --- NAVIGATION IN DER SEITENLEISTE ---
 with st.sidebar:
-    st.header("⚙️ Einstellungen")
-    
-    # Statusanzeige für den festen Schlüssel
-    if FESTER_API_KEY.startswith("sk-"):
-        st.success("🔒 OpenAI API-Key ist dauerhaft aktiv!")
-    else:
-        st.warning("⚠️ Kein gültiger Schlüssel hinterlegt.")
-    
-    st.divider()
-    
-    st.subheader("🏋️‍♂️ KI-Modus")
-    fitness_modus = st.radio(
-        "Was soll die KI analysieren?",
-        [
-            "Trainingsplan aus Übungs-Foto erstellen", 
-            "Kalorien & Proteine aus Lebensmittel-Foto schätzen", 
-            "Motivation & Tipps für diese Übung geben"
-        ]
+    st.title("📱 Hauptmenü")
+    modus = st.selectbox(
+        "Wähle deine App:",
+        ["🏋️ Fitness & Ernährung Coach", "🎓 KI-Lern-Assistent"]
     )
     
     st.divider()
-    st.info("💡 **Tipp:** Du kannst diese Leiste am iPad oben links über das kleine Pfeil-Symbol einklappen, um mehr Platz zu haben!")
-
-# --- HAUPTBILDSCHIRM ---
-uploaded_file = st.file_uploader("Foto aufnehmen oder aus der Mediathek auswählen...", type=["jpg", "jpeg", "png"])
-
-if uploaded_file is not None:
-    col1, col2 = st.columns([1, 1])
+    if FESTER_API_KEY.startswith("sk-"):
+        st.success("🔒 KI-Schlüssel: DAUERHAFT AKTIV")
     
-    with col1:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Dein hochgeladenes Foto", use_container_width=True)
+    st.divider()
+    st.info("💡 **Tipp:** Wechsle hier einfach zwischen Sport und Schule!")
+
+# --- BEREICH 1: FITNESS & ERNÄHRUNG ---
+if modus == "🏋️ Fitness & Ernährung Coach":
+    st.title("🏋️‍♂️ PRO-Fitness Dashboard")
+    st.subheader("Dein KI-Trainer für maximale Performance")
     
-    with col2:
-        st.subheader("⚡ Analyse starten")
-        start_button = st.button("🚀 KI-Fitness-Check starten", use_container_width=True)
-        
-        if start_button:
-            client = OpenAI(api_key=FESTER_API_KEY)
-            
-            with st.spinner("🧠 KI analysiert dein Fitness-Foto... Bitte kurz warten..."):
-                buffered = io.BytesIO()
-                image.save(buffered, format="JPEG")
-                img_str = base64.b64encode(buffered.getvalue()).decode()
-                
-                # Fitness Prompts
-                if fitness_modus == "Trainingsplan aus Übungs-Foto erstellen":
-                    prompt = "Lies die Notizen oder Übungen auf dem Bild und erstelle daraus einen übersichtlichen, perfekt strukturierten Trainingsplan mit Sätzen, Wiederholungen und Pausenzeiten auf Deutsch."
-                elif fitness_modus == "Kalorien & Proteine aus Lebensmittel-Foto schätzen":
-                    prompt = "Analysiere das gezeigte Essen auf dem Bild. Schätze die ungefähren Kalorien, Kohlenhydrate, Fette und Proteine (Eiweiß) für eine normale Portion und gib kurze, gesunde Tipps dazu."
-                else:
-                    prompt = "Analysiere die gezeigte Fitness-Übung oder das Gerät auf dem Bild. Erkläre kurz die perfekte Ausführung, worauf man achten muss, um Verletzungen zu vermeiden, und welche Muskeln trainiert werden."
-                
-                try:
+    col_settings, col_upload = st.columns([1, 2])
+    
+    with col_settings:
+        st.markdown("### 🎯 Zielsetzung")
+        fit_option = st.radio(
+            "Analyse-Typ:",
+            [
+                "Professioneller Trainingsplan (mit RPE & Sätzen)", 
+                "Präziser Kalorien- & Makro-Check (Essen)", 
+                "Technik-Analyse & Verletzungsprävention",
+                "Supplement-Check & Ernährungs-Optimierung"
+            ]
+        )
+        st.write("---")
+        st.caption("Dieses Dashboard ist auf sportwissenschaftliche Genauigkeit optimiert.")
+
+    with col_upload:
+        uploaded_file = st.file_uploader("Foto hochladen (Essen, Gerät oder Plan)", type=["jpg", "png", "jpeg"])
+        if uploaded_file:
+            st.image(uploaded_file, width=400)
+            if st.button("🚀 Fitness-Analyse starten", use_container_width=True):
+                client = OpenAI(api_key=FESTER_API_KEY)
+                with st.spinner("Analyse läuft..."):
+                    img_str = base64.b64encode(uploaded_file.getvalue()).decode()
+                    
+                    # Hochpräzise Fitness-Prompts
+                    if "Trainingsplan" in fit_option:
+                        p = "Erstelle einen Profi-Trainingsplan basierend auf dem Bild. Inkludiere: Übung, Sätze, Wiederholungen, RPE (1-10 Intensität), Pausenzeit und welche Primärmuskeln trainiert werden. Sprache: Deutsch."
+                    elif "Kalorien" in fit_option:
+                        p = "Analysiere das Essen. Schätze: Kalorien, Protein, KH, Fett. Gib eine Bewertung (Gesund/Ungesund) und nenne eine bessere Alternative für Muskelaufbau. Sprache: Deutsch."
+                    elif "Technik" in fit_option:
+                        p = "Analysiere die Übung/das Gerät. Erkläre die perfekte Biomechanik, nenne die 3 häufigsten Fehler und gib Tipps für maximale Range of Motion. Sprache: Deutsch."
+                    else:
+                        p = "Analysiere die gezeigten Infos/Produkte und gib eine wissenschaftlich fundierte Meinung zur Optimierung der Ernährung für einen Sportler ab."
+
                     response = client.chat.completions.create(
                         model="gpt-4o-mini",
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": [
-                                    {"type": "text", "text": prompt},
-                                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}
-                                ],
-                            }
-                        ],
+                        messages=[{"role": "user", "content": [{"type": "text", "text": p}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}]}],
                     )
-                    
-                    ki_ergebnis = response.choices[0].message.content
-                    
-                    st.success("🎉 Analyse fertig!")
-                    st.markdown("### 📝 Dein Fitness-Ergebnis:")
-                    st.info(ki_ergebnis)
-                    
-                    dateiname = uploaded_file.name.split('.')[0]
-                    st.download_button(
-                        label="📥 Plan auf dem iPad speichern",
-                        data=ki_ergebnis,
-                        file_name=f"{dateiname}_Fitnessplan.txt",
-                        mime="text/plain",
-                        use_container_width=True
-                    )
-                    
-                    plan_path = os.path.join("meine_fitness_plaene", f"{dateiname}.txt")
-                    with open(plan_path, "w", encoding="utf-8") as f:
-                        f.write(ki_ergebnis)
-                        
-                except Exception as e:
-                    st.error(f"Fehler bei der Verarbeitung: {e}")
+                    ergebnis = response.choices[0].message.content
+                    st.success("Analyse fertig!")
+                    st.info(ergebnis)
+                    # Verlauf speichern
+                    with open(f"verlauf_fitness/{uploaded_file.name}.txt", "w") as f: f.write(ergebnis)
 
-# Verlauf anzeigen
-st.divider()
-st.subheader("📂 Gespeicherte Fitness-Dokumente")
-dateien = os.listdir("meine_fitness_plaene") if os.path.exists("meine_fitness_plaene") else []
-if dateien:
-    for datei in dateien:
-        st.write(f"💪 {datei}")
+# --- BEREICH 2: KI-LERN-ASSISTENT ---
 else:
-    st.write("Noch keine Pläne in dieser Sitzung gespeichert.")
+    st.title("🎓 KI-Lern-Zentrum")
+    st.subheader("Verwandle Fotos in Wissen")
+    
+    col_input, col_display = st.columns([1, 1])
+    
+    with col_input:
+        lern_option = st.selectbox("Was soll ich erstellen?", ["Übersichtlicher Lernzettel", "Probearbeit mit Lösungen", "Interaktives Quiz"])
+        uploaded_lern = st.file_uploader("Foto deiner Notizen/Buchseite", type=["jpg", "png", "jpeg"])
+        
+    if uploaded_lern:
+        with col_display:
+            st.image(uploaded_lern, caption="Deine Vorlage")
+            if st.button("📝 Wissen generieren", use_container_width=True):
+                client = OpenAI(api_key=FESTER_API_KEY)
+                with st.spinner("KI liest mit..."):
+                    img_str = base64.b64encode(uploaded_lern.getvalue()).decode()
+                    p = f"Erstelle {lern_option} basierend auf dem Bild. Strukturiere es mit Markdown, fettgedruckten Begriffen und klarer Gliederung auf Deutsch."
+                    
+                    response = client.chat.completions.create(
+                        model="gpt-4o-mini",
+                        messages=[{"role": "user", "content": [{"type": "text", "text": p}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}]}],
+                    )
+                    ergebnis = response.choices[0].message.content
+                    st.markdown("---")
+                    st.success("Ergebnis erstellt!")
+                    st.write(ergebnis)
+                    with open(f"verlauf_lernen/{uploaded_lern.name}.txt", "w") as f: f.write(ergebnis)
+
+# Gemeinsamer Verlauf am Ende
+st.divider()
+st.subheader("📂 Letzte Aktivitäten")
+verlauf_pfad = "verlauf_fitness" if modus == "🏋️ Fitness & Ernährung Coach" else "verlauf_lernen"
+dateien = os.listdir(verlauf_pfad)
+if dateien:
+    for d in dateien[-3:]: st.text(f"✅ {d}")
+else:
+    st.write("Noch keine Dokumente heute.")
