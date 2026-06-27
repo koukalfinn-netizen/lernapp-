@@ -5,17 +5,16 @@ import os
 import base64
 import io
 import datetime
+import re
 
 # 1. HARDCODETER API KEY (Frisch & Aktiv)
 FESTER_API_KEY = "sk-proj-VC0P5MOPeotJSISZshXYEaePtQYCyuqYNuMQGj9N1I-eLkdjwr4lNV-tSKjKSbsJ"
 
 st.set_page_config(page_title="iPad Premium OS Workspace", page_icon="📲", layout="wide")
 
-# Ordner für die Ablage von Dokumenten im Hintergrund erstellen
-if not os.path.exists("meine_pdfs"):
-    os.makedirs("meine_pdfs")
-if not os.path.exists("meine_fitness_plaene"):
-    os.makedirs("meine_fitness_plaene")
+# Ordner für Dokumente erstellen
+if not os.path.exists("meine_pdfs"): os.makedirs("meine_pdfs")
+if not os.path.exists("meine_fitness_plaene"): os.makedirs("meine_fitness_plaene")
 
 # --- SYSTEM-GEDÄCHTNIS INITIALISIEREN (Session State) ---
 if "gewicht" not in st.session_state: st.session_state.gewicht = 70
@@ -24,7 +23,11 @@ if "alter" not in st.session_state: st.session_state.alter = 16
 if "klassenstufe" not in st.session_state: st.session_state.klassenstufe = "10. Klasse"
 if "custom_color" not in st.session_state: st.session_state.custom_color = "#1e1e1e"
 
-# Streaks & Timer-Logs
+# Live-Zähler für Proteine und Flüssigkeit
+if "live_wasser" not in st.session_state: st.session_state.live_wasser = 0
+if "live_protein" not in st.session_state: st.session_state.live_protein = 0
+
+# Streaks & Logs
 if "fit_streak" not in st.session_state: st.session_state.fit_streak = 3
 if "last_fit_log" not in st.session_state: st.session_state.last_fit_log = datetime.date.today()
 if "last_video_upload" not in st.session_state: st.session_state.last_video_upload = datetime.date.today()
@@ -33,11 +36,9 @@ if "lern_streak" not in st.session_state: st.session_state.lern_streak = 1
 if "last_lern_log" not in st.session_state: st.session_state.last_lern_log = datetime.date.today()
 if "gelöste_aufgaben" not in st.session_state: st.session_state.gelöste_aufgaben = 2
 
-# Unsichtbares KI-Gedächtnis für den Abend-Report
+# KI-Gedächtnis & Chats
 if "ki_fitness_gedaechtnis" not in st.session_state: st.session_state.ki_fitness_gedaechtnis = []
 if "ki_lern_gedaechtnis" not in st.session_state: st.session_state.ki_lern_gedaechtnis = []
-
-# Chat-Verläufe
 if "chat_history_fitness" not in st.session_state: st.session_state.chat_history_fitness = []
 if "chat_history_lernen" not in st.session_state: st.session_state.chat_history_lernen = []
 
@@ -56,7 +57,7 @@ with st.sidebar:
     modus = st.selectbox("App auswählen:", ["🏋️‍♂️ ATHLETE PRO", "🎓 CAMPUS EXPERT", "🏆 MEILENSTEINE & POKALE", "🌆 KI-ABEND-REPORT"])
     
     st.divider()
-    st.markdown("### ⚙️ Profil-Einstellungen (Änderbar)")
+    st.markdown("### ⚙️ Profil-Einstellungen")
     if modus in ["🏋️‍♂️ ATHLETE PRO", "🏆 MEILENSTEINE & POKALE"]:
         st.session_state.alter = st.number_input("Alter", value=st.session_state.alter)
         st.session_state.gewicht = st.number_input("Gewicht (kg)", value=st.session_state.gewicht)
@@ -66,40 +67,35 @@ with st.sidebar:
         
     st.divider()
     st.markdown("### 🎨 100+ Farbstudio (RGB Mixer)")
-    farb_modus = st.radio("Wie willst du die Farbe wählen?", ["🎛️ Eigener RGB-Mixer", "📌 Beliebte Presets"])
-    
-    if farb_modus == "🎛️ Eigener RGB-Mixer":
-        r = st.slider("🔴 Rot-Anteil", 0, 255, 30)
-        g = st.slider("🟢 Grün-Anteil", 0, 255, 30)
-        b = st.slider("🔵 Blau-Anteil", 0, 255, 30)
+    farb_modus = st.radio("Farbwahl:", ["🎛️ RGB Mixer", "📌 Presets"])
+    if farb_modus == "🎛️ RGB Mixer":
+        r = st.slider("🔴 Rot", 0, 255, 30)
+        g = st.slider("🟢 Grün", 0, 255, 30)
+        b = st.slider("🔵 Blau", 0, 255, 30)
         st.session_state.custom_color = f"rgb({r}, {g}, {b})"
     else:
-        presets = {
-            "⚪ Standard Grau": "#1e1e1e", "⚫ Deep Black": "#000000",
-            "🧪 Neon Grün": "#39ff14", "🔮 Neon Violett": "#9d00ff", 
-            "🔥 Neon Orange": "#ff5f1f", "🐬 Neon Türkis": "#00f5ff", "🛍️ Neon Pink": "#ff1493"
-        }
-        wahl = st.selectbox("Preset wählen:", list(presets.keys()))
-        st.session_state.custom_color = presets[wahl]
+        presets = {"⚪ Grau": "#1e1e1e", "⚫ Black": "#000000", "🧪 Neon Grün": "#39ff14", "🔮 Neon Violett": "#9d00ff", "🛍️ Neon Pink": "#ff1493"}
+        st.session_state.custom_color = presets[st.selectbox("Preset:", list(presets.keys()))]
 
-st.markdown(f"""
-    <style>
-    .stApp {{ background-color: {st.session_state.custom_color} !important; color: white !important; }}
-    h1, h2, h3, h4, h5, h6, p, span, label {{ color: white !important; }}
-    .stButton>button {{
-        background-color: rgba(255, 255, 255, 0.1) !important;
-        color: white !important;
-        border: 1px solid rgba(255, 255, 255, 0.2) !important;
-    }}
-    </style>
-""", unsafe_allow_html=True)
+st.markdown(f"<style>.stApp {{ background-color: {st.session_state.custom_color} !important; color: white !important; }} h1,h2,h3,h4,p,span,label {{ color: white !important; }}</style>", unsafe_allow_html=True)
 
-# --- CALLBACKS FÜR SICH LEERENDE EINGABEFELDER ---
+# --- AUTOMATISCHE AUSWERTUNG DER SCHNELLEINGABE (PROTEIN & WASSER) ---
 def food_eingabe_callback():
     text = st.session_state.food_eingabe_key
     if text:
         st.session_state.ki_fitness_gedaechtnis.append(f"Eintrag ({heute.strftime('%H:%M')}): {text}")
-        st.toast(f"🍕 KI gemerkt: '{text}'")
+        
+        # Suchen nach Zahlen + ml/g Protein im Text via Regex
+        wasser_match = re.search(r'(\d+)\s*(ml|milliliter|wasser)', text.lower())
+        protein_match = re.search(r'(\d+)\s*(g|gramm)\s*(protein|eiweiß)', text.lower())
+        
+        if wasser_match:
+            st.session_state.live_wasser += int(wasser_match.group(1))
+            st.toast(f"💧 +{wasser_match.group(1)}ml Wasser hinzugefügt!")
+        if protein_match:
+            st.session_state.live_protein += int(protein_match.group(1))
+            st.toast(f"🥩 +{protein_match.group(1)}g Protein registriert!")
+            
         st.session_state.food_eingabe_key = ""
 
 def lern_eingabe_callback():
@@ -112,35 +108,32 @@ def lern_eingabe_callback():
 # --- BEREICH 1: FITNESS (ATHLETE PRO) ---
 if modus == "🏋️‍♂️ ATHLETE PRO":
     st.title("🏋️‍♂️ ATHLETE PRO Dashboard")
-    st.caption(f"🧬 Profil: {st.session_state.alter} Jahre | {st.session_state.gewicht}kg | {st.session_state.groesse}cm")
     
-    k1, k2 = st.columns(2)
-    with k1:
-        st.metric("🔥 Aktueller Sport-Streak", f"{st.session_state.fit_streak} Tage")
-        if st.button("🗑️ Sportcounter auf 0 zurücksetzen", use_container_width=True):
-            st.session_state.fit_streak = 0
-            st.rerun()
-    with k2:
-        if (heute - st.session_state.last_video_upload).days >= 7:
-            st.warning("🚨 NACHRICHT VOM COACH: Du hast seit einer Woche kein Beweisvideo mehr hochgeladen! 🦾")
-        else:
-            st.success("✅ Dein Video-Status ist aktiv.")
+    # Live Zähler Widgets im Grid-Layout
+    c_w1, c_w2, c_w3 = st.columns(3)
+    with c_w1: st.metric("🔥 Sport-Streak", f"{st.session_state.fit_streak} Tage")
+    with c_w2: st.metric("💧 Wasser Live (Ziel: 3000ml)", f"{st.session_state.live_wasser} ml")
+    with c_w3: st.metric("🥩 Protein Live (Ziel: 140g)", f"{st.session_state.live_protein} g")
+    
+    if st.button("🔄 Täglich geloggte Live-Zähler zurücksetzen", use_container_width=True):
+        st.session_state.live_wasser = 0
+        st.session_state.live_protein = 0
+        st.rerun()
 
     st.divider()
-    st.markdown("### 🥤 All-in-One Schnelleingabe (Essen, Getränke & Sport)")
+    st.markdown("### 🥤 All-in-One Schnelleingabe")
+    st.caption("Beispiel-Eingabe: 'Habe 500ml Wasser getrunken und einen Shake mit 30g Protein genommen'")
     st.text_input("Was hast du zu dir genommen / getan?", key="food_eingabe_key", on_change=food_eingabe_callback)
 
     st.divider()
     st.markdown("### 📹 Video-Beweispflicht (Min. 5 Minuten)")
     video_file = st.file_uploader("Trainingsvideo auswählen...", type=["mp4", "mov", "avi"])
-    if video_file is not None:
-        st.info("⏱️ Video wird auf Mindestlaufzeit von 5 Minuten geprüft...")
-        if st.button("✅ Video-Prüfung bestätigen & Streak erhöhen"):
-            st.session_state.fit_streak += 1
-            st.session_state.last_fit_log = heute
-            st.session_state.last_video_upload = heute
-            st.success("🎉 Video akzeptiert! Streak gesichert.")
-            st.rerun()
+    if video_file is not None and st.button("✅ Video-Prüfung bestätigen & Streak erhöhen"):
+        st.session_state.fit_streak += 1
+        st.session_state.last_fit_log = heute
+        st.session_state.last_video_upload = heute
+        st.success("🎉 Video akzeptiert! Streak gesichert.")
+        st.rerun()
 
     st.divider()
     st.markdown("### 📸 Personalisierter KI-Scanner & Plan-Generator")
@@ -153,7 +146,7 @@ if modus == "🏋️‍♂️ ATHLETE PRO":
             client = OpenAI(api_key=FESTER_API_KEY)
             with st.spinner("Dein Trainer wertet aus..."):
                 img_str = base64.b64encode(uploaded_file.getvalue()).decode()
-                prompt = f"Nutzerdaten: {st.session_state.alter}J, {st.session_state.gewicht}kg, {st.session_state.groesse}cm. Analysiere das Bild für '{fit_option}' exakt passend zu diesen Körperdaten auf Deutsch."
+                prompt = f"Nutzerdaten: {st.session_state.alter}J, {st.session_state.gewicht}kg. Analysiere das Bild für '{fit_option}'."
                 response = client.chat.completions.create(
                     model="gpt-4o-mini",
                     messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}]}],
@@ -161,41 +154,25 @@ if modus == "🏋️‍♂️ ATHLETE PRO":
                 ki_ergebnis = response.choices[0].message.content
                 st.info(ki_ergebnis)
                 
-                # Datei lokal sichern und Download-Button anbieten
-                plan_path = os.path.join("meine_fitness_plaene", f"{dateiname}_Fitnessplan.txt")
-                with io.open(plan_path, "w", encoding="utf-8") as f:
+                with io.open(os.path.join("meine_fitness_plaene", f"{dateiname}_Plan.txt"), "w", encoding="utf-8") as f:
                     f.write(ki_ergebnis)
-                
-                st.download_button(
-                    label="💾 Plan auf dem iPad speichern",
-                    data=ki_ergebnis,
-                    file_name=f"{dateiname}_Fitnessplan.txt",
-                    mime="text/plain",
-                    use_container_width=True
-                )
+                st.download_button("💾 Plan auf dem iPad speichern", data=ki_ergebnis, file_name=f"{dateiname}_Plan.txt", mime="text/plain", use_container_width=True)
 
     st.divider()
     st.subheader("📂 Gespeicherte Fitness-Dokumente")
-    ordner_existiert = os.path.exists("meine_fitness_plaene")
-    dateien = os.listdir("meine_fitness_plaene") if ordner_existiert else []
-    if dateien:
-        for datei in dateien:
-            st.write(f"💪 {datei}")
-    else:
-        st.write("Noch keine Pläne in dieser Sitzung gespeichert.")
+    for datei in os.listdir("meine_fitness_plaene"): st.write(f"💪 {datei}")
 
     st.divider()
     st.markdown("### 💬 Chat mit deinem Personal Trainer")
     for msg in st.session_state.chat_history_fitness:
         with st.chat_message(msg["role"]): st.write(msg["content"])
-            
     u_input = st.chat_input("Frage den Coach...")
     if u_input:
         st.session_state.chat_history_fitness.append({"role": "user", "content": u_input})
         client = OpenAI(api_key=FESTER_API_KEY)
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[{"role": "system", "content": f"Du bist ein Fitness-Coach. Beachte die Nutzerdaten: {st.session_state.gewicht}kg."}] + st.session_state.chat_history_fitness[-6:]
+            messages=[{"role": "system", "content": f"Coach für {st.session_state.gewicht}kg."}] + st.session_state.chat_history_fitness[-6:]
         )
         st.session_state.chat_history_fitness.append({"role": "assistant", "content": response.choices[0].message.content})
         st.rerun()
@@ -203,38 +180,22 @@ if modus == "🏋️‍♂️ ATHLETE PRO":
 # --- BEREICH 2: SCHULE (CAMPUS EXPERT) ---
 elif modus == "🎓 CAMPUS EXPERT":
     st.title("🎓 CAMPUS EXPERT Dashboard")
-    st.caption(f"🎯 Niveau eingestellt auf: {st.session_state.klassenstufe}")
-    
-    k1, k2 = st.columns(2)
-    with k1:
-        st.metric("⚡ Aktueller Lern-Streak", f"{st.session_state.lern_streak} Tage")
-        if st.button("🗑️ Lerncounter auf 0 zurücksetzen", use_container_width=True):
-            st.session_state.lern_streak = 0
-            st.rerun()
-    with k2:
-        if (heute - st.session_state.last_lern_log).days >= 7:
-            st.warning("🚨 NACHRICHT VOM TUTOR: Seit einer Woche keine aktiven Notizen hochgeladen! 🧠")
-
-    st.divider()
+    st.metric("⚡ Aktueller Lern-Streak", f"{st.session_state.lern_streak} Tage")
     st.text_input("Was hast du heute gelernt?", key="lern_eingabe_key", on_change=lern_eingabe_callback)
 
     st.divider()
     st.markdown("### 📸 Aufgaben- & Dokumenten-Scanner")
     lern_option = st.selectbox("Format:", ["Übersichtlicher Lernzettel", "Probearbeit mit Lösungen", "Interaktives Quiz"])
     uploaded_l = st.file_uploader("Heft- oder Buchseite fotografieren...", type=["jpg", "png", "jpeg"])
-    
     if uploaded_l and st.button("🧬 Dokumentation generieren"):
         client = OpenAI(api_key=FESTER_API_KEY)
-        with st.spinner("KI wertet Schul-Inhalt aus..."):
+        with st.spinner("Auswertung..."):
             img_str = base64.b64encode(uploaded_l.getvalue()).decode()
-            prompt = f"Erstelle ein(e) '{lern_option}' basierend auf dem Bild. Niveau: {st.session_state.klassenstufe}. Sprache: Deutsch."
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
-                messages=[{"role": "user", "content": [{"type": "text", "text": prompt}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}]}],
+                messages=[{"role": "user", "content": [{"type": "text", "text": f"Niveau: {st.session_state.klassenstufe}. Erstelle {lern_option}"}, {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{img_str}"}}]}],
             )
-            ergebnis_text = response.choices[0].message.content
-            st.write(ergebnis_text)
-            
+            st.write(response.choices[0].message.content)
             st.session_state.gelöste_aufgaben += 1
             st.session_state.last_lern_log = heute
             st.session_state.lern_streak += 1
@@ -244,16 +205,64 @@ elif modus == "🎓 CAMPUS EXPERT":
     st.markdown("### 💬 Chat mit deinem KI-Tutor")
     for msg in st.session_state.chat_history_lernen:
         with st.chat_message(msg["role"]): st.write(msg["content"])
-            
     u_input_l = st.chat_input("Frag den Lehrer...")
     if u_input_l:
         st.session_state.chat_history_lernen.append({"role": "user", "content": u_input_l})
         client = OpenAI(api_key=FESTER_API_KEY)
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "system", "content": f"Du bist ein geduldiger Lehrer. Erkläre perfekt für die {st.session_state.klassenstufe}."}] + st.session_state.chat_history_lernen[-6:]
-        )
+        response = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "system", "content": f"Lehrer für {st.session_state.klassenstufe}."}] + st.session_state.chat_history_lernen[-6:])
         st.session_state.chat_history_lernen.append({"role": "assistant", "content": response.choices[0].message.content})
         st.rerun()
 
-# --- BERE
+# --- BEREICH 3: BELOHNUNGSSYSTEM (MEILENSTEINE & POKALE) ---
+elif modus == "🏆 MEILENSTEINE & POKALE":
+    st.title("🏆 Dein Trophäenschrank & Erfolgs-Tracker")
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("### 🏋️‍♂️ Fitness & Ernährung")
+        st.metric("Sport-Streak", f"{st.session_state.fit_streak} Tage")
+        
+        # Live Auswertung der Ziele
+        progress_wasser = min(st.session_state.live_wasser / 3000, 1.0)
+        progress_protein = min(st.session_state.live_protein / 140, 1.0)
+        
+        st.write(f" Wasser-Ziel: {st.session_state.live_wasser}/3000 ml")
+        st.progress(progress_wasser)
+        st.write(f" Protein-Ziel: {st.session_state.live_protein}/140 g")
+        st.progress(progress_protein)
+        
+        st.divider()
+        if st.session_state.fit_streak >= 3: st.success("🥉 Bronze-Athlet (3 Tage Streak!)")
+        if st.session_state.live_wasser >= 3000: st.success("👑 Hydration-Elite (3000ml geknackt!)")
+        else: st.code("🔒 Hydration-Elite (Trinke 3000ml am Tag)")
+        if st.session_state.live_protein >= 140: st.success("🔱 Protein-Master (140g Eiweiß erreicht!)")
+        else: st.code("🔒 Protein-Master (Erreiche 140g Protein am Tag)")
+
+    with c2:
+        st.markdown("### 🎓 Schul & Campus Meilensteine")
+        st.metric("Lern-Streak", f"{st.session_state.lern_streak} Tage")
+        st.metric("Gescannte Dokumente", f"{st.session_state.gelöste_aufgaben} Aufgaben")
+        if st.session_state.gelöste_aufgaben >= 1: st.success("📝 Erstes Dokument erfasst")
+
+# --- BEREICH 4: KI-ABEND-REPORT ---
+else:
+    st.title("🌆 Automatischer KI-Abendbericht")
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("### 🏋️‍♂️ Auswertung Fitness")
+        if st.session_state.ki_fitness_gedaechtnis:
+            for e in st.session_state.ki_fitness_gedaechtnis: st.text(f"• {e}")
+            if st.button("🌖 Fitness-Bericht generieren"):
+                client = OpenAI(api_key=FESTER_API_KEY)
+                r = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": f"Fasse zusammen für {st.session_state.gewicht}kg: {', '.join(st.session_state.ki_fitness_gedaechtnis)}"}])
+                st.info(r.choices[0].message.content)
+        else: st.info("Keine Einträge.")
+    with c2:
+        st.markdown("### 🎓 Auswertung Schule")
+        if st.session_state.ki_lern_gedaechtnis:
+            for e in st.session_state.ki_lern_gedaechtnis: st.text(f"• {e}")
+            if st.button("🌖 Schul-Bericht generieren"):
+                client = OpenAI(api_key=FESTER_API_KEY)
+                r = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": f"Fasse zusammen für {st.session_state.klassenstufe}: {', '.join(st.session_state.ki_lern_gedaechtnis)}"}])
+                st.success(r.choices[0].message.content)
+        else: st.info("Keine Einträge.")
