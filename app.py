@@ -8,15 +8,16 @@ import datetime
 import re
 
 # =========================================================================
-# 1. GLOBALE KONFIGURATION & API AUTHENTIFIZIERUNG
+# 1. ERWEITERTE GLOBALE KONFIGURATION & API AUTHENTIFIZIERUNG
 # =========================================================================
 FESTER_API_KEY = "sk-proj-VC0P5MOPeotJSISZshXYEaePtQYCyuqYNuMQGj9N1I-eLkdjwr4lNV-tSKjKSbsJ"
 
-# Initialisiere den OpenAI Client sauber auf globaler Ebene
+# Initialisierung des globalen OpenAI-Clients
 client = OpenAI(api_key=FESTER_API_KEY)
 
+# Streamlit Page Setup mit erweiterter Konfiguration
 st.set_page_config(
-    page_title="iPad Premium OS Workspace PRO", 
+    page_title="iPad Premium OS Workspace MAX", 
     page_icon="📲", 
     layout="wide",
     initial_sidebar_state="expanded"
@@ -27,9 +28,11 @@ if not os.path.exists("meine_pdfs"):
     os.makedirs("meine_pdfs")
 if not os.path.exists("meine_fitness_plaene"):
     os.makedirs("meine_fitness_plaene")
+if not os.path.exists("meine_notizen"):
+    os.makedirs("meine_notizen")
 
 # =========================================================================
-# 2. PERMANENTES SYSTEM-GEDÄCHTNIS (Session State Management)
+# 2. UMFASSENDES SYSTEM-GEDÄCHTNIS (Advanced Session State)
 # =========================================================================
 # Benutzerprofileinstellungen
 if "gewicht" not in st.session_state:
@@ -53,7 +56,7 @@ if "live_schritte" not in st.session_state:
 if "live_verbrannte_kalorien" not in st.session_state:
     st.session_state.live_verbrannte_kalorien = 0
 
-# Streaks & Zeitstempel-Historie (Schutz vor Cheat-Versuchen)
+# Streaks & Zeitstempel-Historie
 if "fit_streak" not in st.session_state:
     st.session_state.fit_streak = 3
 if "last_fit_log" not in st.session_state:
@@ -78,8 +81,14 @@ if "chat_history_fitness" not in st.session_state:
 if "chat_history_lernen" not in st.session_state:
     st.session_state.chat_history_lernen = []
 
+# Extra Module Daten
+if "supplements" not in st.session_state:
+    st.session_state.supplements = {"Kreatin": False, "Omega 3": False, "Zink/Magnesium": False}
+if "stundenplan" not in st.session_state:
+    st.session_state.stundenplan = {"Montag": "", "Dienstag": "", "Mittwoch": "", "Donnerstag": "", "Freitag": ""}
+
 # =========================================================================
-# 3. AUTOMATISCHE STREAK-VERLUST-LOGIK (Zeitbasierter Werte-Verfall)
+# 3. AUTOMATISCHE STREAK-VERLUST-LOGIK
 # =========================================================================
 heute = datetime.date.today()
 if (heute - st.session_state.last_fit_log).days >= 2:
@@ -90,7 +99,7 @@ if (heute - st.session_state.last_lern_log).days >= 2:
     st.sidebar.error("⚠️ Inaktivität in der Schule! Dein Lern-Streak wurde auf 0 gesetzt.")
 
 # =========================================================================
-# 4. SIDEBAR: CONTROL CENTER & RGB MATRIX FARBSTUDIO
+# 4. SIDEBAR: CONTROL CENTER & MATRIX FARBSTUDIO
 # =========================================================================
 with st.sidebar:
     st.title("📲 iPad Control Center")
@@ -134,7 +143,7 @@ with st.sidebar:
         if wahl in ["☀️ Helles Weiss", "💛 Helles Gelb"]:
             r_val, g_val, b_val = 245, 245, 245
 
-# --- INTELLIGENTE KONTRAST-LOGIK (Schriftfarbe passt sich der Helligkeit an) ---
+# --- INTELLIGENTE KONTRAST-LOGIK ---
 luminanz = (r_val * 299 + g_val * 587 + b_val * 114) / 1000
 schrift_farbe = "#000000" if luminanz > 130 else "#FFFFFF"
 
@@ -150,7 +159,7 @@ st.markdown(f"""
 """, unsafe_allow_html=True)
 
 # =========================================================================
-# 5. ASYNCHRONE AUTO-CLEAR-CALLBACKS FÜR DIE SCHNELLEINGABEN
+# 5. ASYNCHRONE AUTO-CLEAR-CALLBACKS
 # =========================================================================
 def food_eingabe_callback():
     text = st.session_state.food_eingabe_key
@@ -221,11 +230,23 @@ if modus == "🏋️‍♂️ ATHLETE PRO":
                 st.session_state.live_verbrannte_kalorien += kcal_extrahiert
                 st.session_state.ki_fitness_gedaechtnis.append(f"Sport-Session: {sportart} für {dauer} Minuten durchgeführt (+{kcal_extrahiert} kcal).")
 
+    st.divider()
+    st.markdown("### 💊 Supplement-Tracker")
+    col_sup1, col_sup2, col_sup3 = st.columns(3)
+    with col_sup1:
+        st.session_state.supplements["Kreatin"] = st.checkbox("Kreatin (5g)", value=st.session_state.supplements["Kreatin"])
+    with col_sup2:
+        st.session_state.supplements["Omega 3"] = st.checkbox("Omega 3 Kapseln", value=st.session_state.supplements["Omega 3"])
+    with col_sup3:
+        st.session_state.supplements["Zink/Magnesium"] = st.checkbox("Zink & Magnesium", value=st.session_state.supplements["Zink/Magnesium"])
+
     if st.button("🔄 Alle heutigen Live-Tracker auf Null zurücksetzen"):
         st.session_state.live_wasser = 0
         st.session_state.live_protein = 0
         st.session_state.live_schritte = 0
         st.session_state.live_verbrannte_kalorien = 0
+        for k in st.session_state.supplements:
+            st.session_state.supplements[k] = False
         st.rerun()
 
     st.divider()
@@ -293,8 +314,19 @@ if modus == "🏋️‍♂️ ATHLETE PRO":
 elif modus == "🎓 CAMPUS EXPERT":
     st.title("🎓 CAMPUS EXPERT Workspace")
     st.markdown("Maximiere deine schulischen Leistungen durch strukturierte Analyse-Werkzeuge.")
-    st.metric("⚡ Aktueller Bildungs-Lern-Streak", f"{st.session_state.lern_streak} Tage")
     
+    col_c1, col_c2 = st.columns([1, 2])
+    with col_c1:
+        st.metric("⚡ Aktueller Bildungs-Lern-Streak", f"{st.session_state.lern_streak} Tage")
+    with col_c2:
+        st.markdown("#### 📅 Digitaler Stundenplan-Planer")
+        st.session_state.stundenplan["Montag"] = st.text_input("Montag Fächer:", value=st.session_state.stundenplan["Montag"])
+        st.session_state.stundenplan["Dienstag"] = st.text_input("Dienstag Fächer:", value=st.session_state.stundenplan["Dienstag"])
+        st.session_state.stundenplan["Mittwoch"] = st.text_input("Mittwoch Fächer:", value=st.session_state.stundenplan["Mittwoch"])
+        st.session_state.stundenplan["Donnerstag"] = st.text_input("Donnerstag Fächer:", value=st.session_state.stundenplan["Donnerstag"])
+        st.session_state.stundenplan["Freitag"] = st.text_input("Freitag Fächer:", value=st.session_state.stundenplan["Freitag"])
+    
+    st.divider()
     st.markdown("### 📚 Schnelleingabe für erarbeitetes Tageswissen")
     st.text_input("Welche Kernaussage oder welches Thema hast du gerade gelernt? (Drücke Enter)", key="lern_eingabe_key", on_change=lern_eingabe_callback)
 
@@ -315,6 +347,15 @@ elif modus == "🎓 CAMPUS EXPERT":
             st.session_state.last_lern_log = heute
             st.session_state.lern_streak += 1
             st.toast("Erfolgreich verzeichnet! Lern-Streak aktualisiert.")
+
+    st.divider()
+    st.markdown("### 📝 Freie Notizen & Ablagesystem")
+    neue_notiz = st.text_area("Schreibe hier einen Gedanken oder eine Zusammenfassung auf:")
+    notiz_titel = st.text_input("Titel der Notiz:")
+    if st.button("💾 Notiz auf Server sichern") and neue_notiz and notiz_titel:
+        with open(f"meine_notizen/{notiz_titel}.txt", "w", encoding="utf-8") as f:
+            f.write(neue_notiz)
+        st.success(f"Notiz '{notiz_titel}' erfolgreich abgelegt!")
 
     st.divider()
     st.markdown("### 💬 Chat mit deinem persönlichen KI-Fach-Tutor")
@@ -363,4 +404,70 @@ elif modus == "🏆 MEILENSTEINE & POKALE":
             st.code("🔒 Hydration-Elite (Sperre aufheben: Trinke heute 3000ml Wasser)")
             
         if st.session_state.live_protein >= 140: 
-            st.success("🔱 Protein-Master (
+            st.success("🔱 Protein-Master (Anaboler Schwellenwert von 140g Eiweiß erreicht)")
+        else: 
+            st.code("🔒 Protein-Master (Sperre aufheben: Konsumiere 140g Eiweiß)")
+            
+        if st.session_state.live_schritte >= 10000: 
+            st.success("⚡ Cardio-Gott (Metabolisches Schrittziel von 10.000 Schritten geknackt)")
+        else: 
+            st.code("🔒 Cardio-Gott (Sperre aufheben: Gehe heute 10.000 Schritte)")
+
+    with c2:
+        st.markdown("### 🎓 Akademische Meilensteine")
+        st.metric("Aktiver Lern-Streak", f"{st.session_state.lern_streak} Tage")
+        st.metric("Gescannt & verarbeitet", f"{st.session_state.gelöste_aufgaben} Lehreinheiten")
+        
+        st.divider()
+        st.markdown("#### Freigeschaltete Badges:")
+        if st.session_state.gelöste_aufgaben >= 1: 
+            st.success("📝 Dokumenten-Pionier (Das erste Schul- oder Studiendokument erfolgreich digitalisiert)")
+        if st.session_state.lern_streak >= 5:
+            st.success("🧠 Brain-Elite (5 Tage permanenter Fokus beim Lernen)")
+        else:
+            st.code("🔒 Brain-Elite (Sperre aufheben: Benötigt einen 5 Tage Lern-Streak)")
+
+# =========================================================================
+# --- MODUL 4: ANALYSE-ENGINE (KI-ABEND-REPORT) ---
+# =========================================================================
+else:
+    st.title("🌆 Automatischer KI-Abendbericht & Tagesfazit")
+    st.write("Das System aggregiert sämtliche Daten des Tages und zieht eine kompromisslose Bilanz.")
+    
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown("### 🏋️‍♂️ Auswertung Bewegung & Ernährung")
+        if st.session_state.ki_fitness_gedaechtnis:
+            for e in st.session_state.ki_fitness_gedaechtnis: 
+                st.text(f"• {e}")
+                
+            if st.button("🌖 Unbeschönigten KI-Abendbericht generieren"):
+                with st.spinner("Wissenschaftliche Bilanz wird gezogen..."):
+                    daten_text = ", ".join(st.session_state.ki_fitness_gedaechtnis)
+                    prompt = f"""
+                    Du bist ein extrem ehrlicher, kompromissloser und wissenschaftlich orientierter Fitness-Coach. 
+                    Nutzerprofil: {st.session_state.alter} Jahre alt, {st.session_state.gewicht}kg schwer, {st.session_state.groesse}cm groß.
+                    Heutige Ist-Werte: {st.session_state.live_wasser}ml Wasser (Soll: 3000ml), {st.session_state.live_protein}g Protein (Soll: 140g), {st.session_state.live_schritte} Schritte (Soll: 10000).
+                    Gedächtnis-Protokoll des Tages: {daten_text}.
+                    
+                    Aufgabe: Erstelle ein klares, direktes Tagesfazit auf Deutsch. Lobe gute Leistungen sachlich. KRITISIERE den Nutzer sofort und unmissverständlich, wenn eines der metabolischen Ziele nicht erreicht wurde! Nenne am Ende exakt 2 präzise, messbare Verbesserungsvorschläge für den morgigen Tag.
+                    """
+                    r = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}])
+                    st.info(r.choices[0].message.content)
+        else: 
+            st.info("Noch keine Aktivitäts- und Ernährungseinträge für den heutigen Tag im Speicher vorhanden.")
+            
+    with c2:
+        st.markdown("### 🎓 Auswertung Schule & Lernen")
+        if st.session_state.ki_lern_gedaechtnis:
+            for e in st.session_state.ki_lern_gedaechtnis: 
+                st.text(f"• {e}")
+                
+            if st.button("🌖 Akademischen KI-Schulbericht generieren"):
+                with st.spinner("KI-Tutor analysiert erbrachte Denkleistungen..."):
+                    daten_text = ", ".join(st.session_state.ki_lern_gedaechtnis)
+                    prompt = f"Erstelle ein professionelles Tagesfazit für einen Schüler bzw. eine Schülerin der {st.session_state.klassenstufe} basierend auf folgendem Logbuch: {daten_text}. Gib ehrliches Feedback, übe konstruktive Kritik an Wissenslücken und nenne exakt 2 didaktische Lerntipps für morgen auf Deutsch."
+                    r = client.chat.completions.create(model="gpt-4o-mini", messages=[{"role": "user", "content": prompt}])
+                    st.success(r.choices[0].message.content)
+        else: 
+            st.info("Es wurden am heutigen Tag noch keine Lerneinträge verzeichnet.")
