@@ -77,7 +77,7 @@ if uploaded_file is not None:
             st.warning("Bitte gib deinen API-Key ein.")
 
 # Ablage anzeigen
-st.hr()
+st.divider()
 st.subheader("📂 Deine Dokumente")
 dateien = os.listdir("meine_pdfs")
 if dateien:
