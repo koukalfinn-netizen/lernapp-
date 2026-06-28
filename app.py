@@ -1,9 +1,13 @@
 import streamlit as st
 import datetime
+import os
 from openai import OpenAI
 
 # --- SEITENKONFIGURATION & STYLING ---
 st.set_page_config(page_title="AI Learn & Fit Hub", page_icon="⚡", layout="wide")
+
+# Lädt den API Key sicher aus den Streamlit Secrets oder der Umgebung
+OPENAI_API_KEY = st.secrets.get("OPENAI_API_KEY") or os.environ.get("OPENAI_API_KEY")
 
 # Initialisierung des Session States
 if "chat_history" not in st.session_state:
@@ -19,31 +23,59 @@ if "medals" not in st.session_state:
 if "last_activity" not in st.session_state:
     st.session_state.last_activity = datetime.date.today()
 
-# --- SIDEBAR: API KEY & PERSONALISIERUNG ---
-st.sidebar.title("🔑 API-Einstellungen")
-# Hier trägst du deinen eigenen Key ein, wenn du die App startest
-openai_api_key = st.sidebar.text_input("Dein OpenAI API Key", type="password")
+# --- SIDEBAR: PERSONALISIERUNG & NAVIGATION ---
+st.sidebar.title("🎛️ Navigation")
+app_mode = st.sidebar.selectbox("Bereich auswählen", [
+    "📚 Lernen & Schule", 
+    "💪 Fitness & Ernährung",
+    "🏆 Meine Medaillen & Erfolge"
+])
 
-st.sidebar.title("🎨 Personalisierung")
-bg_color = st.sidebar.color_picker("Wähle deine Dashboard-Farbe", "#1E1E1E")
-text_color = st.sidebar.color_picker("Wähle deine Text-Farbe", "#FFFFFF")
-app_mode = st.sidebar.selectbox("Modus wechseln", ["📚 Lernen & Schule", "💪 Fitness & Ernährung"])
+st.sidebar.title("🎨 Design & Farben")
+bg_color = st.sidebar.color_picker("Dashboard-Farbe", "#121212")
+text_color = st.sidebar.color_picker("Text-Farbe", "#FFFFFF")
+accent_color = "#2ECC71" 
 
-# CSS für dynamische Farben anwenden
+# CSS für modernere Schriften, saubere Abstände und dynamische Farben
 st.markdown(f"""
     <style>
-    .stApp {{ background-color: {bg_color}; color: {text_color}; }}
+    html, body, [data-testid="stSidebar"], .stApp {{
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
+    }}
+    h1, h2, h3, h4, h5, h6 {{
+        font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
+        color: {text_color} !important;
+        font-weight: 700;
+    }}
+    .stat-box {{
+        background-color: rgba(255, 255, 255, 0.05);
+        padding: 20px;
+        border-radius: 10px;
+        border-left: 5px solid {accent_color};
+        margin-bottom: 15px;
+    }}
+    .medal-card {{
+        background-color: rgba(255, 215, 0, 0.1);
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #FFD700;
+        margin: 10px 0px;
+        font-size: 1.1rem;
+        font-weight: bold;
+    }}
     </style>
     """, unsafe_allow_html=True)
 
 # Hilfsfunktion für echte KI-Abfragen
 def get_ai_response(prompt_text):
-    if not openai_api_key:
-        return "Bitte gib zuerst deinen OpenAI API-Key in der linken Seitenleiste ein, um diese Funktion zu nutzen!"
+    if not OPENAI_API_KEY:
+        return "⚠️ Fehler: Kein OpenAI API-Key gefunden. Bitte füge den Key in den Streamlit Secrets hinzu."
     try:
-        client = OpenAI(api_key=openai_api_key)
+        client = OpenAI(api_key=OPENAI_API_KEY)
         response = client.chat.completions.create(
-            model="gpt-4o-mini", # Schnelles und günstiges Modell
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt_text}]
         )
         return response.choices[0].message.content
@@ -55,7 +87,7 @@ days_passed = (datetime.date.today() - st.session_state.last_activity).days
 if days_passed >= 2:
     st.session_state.streak_fitness = 0
     st.session_state.streak_lernen = 0
-    st.sidebar.warning("Deine Tracker wurden wegen 2 Tagen Inaktivität zurückgesetzt!")
+    st.sidebar.warning("⚠️ Deine Tracker wurden wegen 2 Tagen Inaktivität zurückgesetzt!")
 
 if st.sidebar.button("🔴 Tracker manuell zurücksetzen"):
     st.session_state.streak_fitness = 0
@@ -70,7 +102,7 @@ if app_mode == "📚 Lernen & Schule":
     st.title("📚 AI Lern-Zentrum")
     
     klassenstufe = st.selectbox("Klassenstufe wählen", [f"Klasse {i}" for i in range(1, 13)])
-    st.info(f"Modus aktiv für: {klassenstufe}")
+    st.markdown(f"<div class='stat-box'><b>Aktiver Modus:</b> {klassenstufe}</div>", unsafe_allow_html=True)
     
     st.subheader("📝 KI-Lernunterlagen erstellen")
     themen_input = st.text_input("Gib dein Thema ein (z.B. 'Fotosynthese')")
@@ -80,19 +112,24 @@ if app_mode == "📚 Lernen & Schule":
         with st.spinner("KI generiert deine Unterlagen..."):
             prompt = f"Erstelle einen ausführlichen {erstellungs_typ} zum Thema '{themen_input}' für die {klassenstufe} in der Schule. Strukturiere es übersichtlich mit Überschriften."
             antwort = get_ai_response(prompt)
+            st.markdown("### Dein generiertes Dokument")
             st.write(antwort)
 
     st.write("---")
     st.subheader("⏳ Lern-Tracker")
-    st.write(f"🔥 Aktueller Lern-Streak: **{st.session_state.streak_lernen}**")
+    st.markdown(f"<div class='stat-box'>🔥 Aktueller Lern-Streak: <b>{st.session_state.streak_lernen} Tage</b></div>", unsafe_allow_html=True)
     
     video_file_learn = st.file_uploader("Lade ein 5-Minuten-Lernvideo hoch", type=["mp4", "mov"], key="learn_vid")
     if video_file_learn is not None:
         if st.button("Video bestätigen & Tracker +1"):
             st.session_state.streak_lernen += 1
             st.session_state.last_activity = datetime.date.today()
+            
             if st.session_state.streak_lernen == 1:
-                st.session_state.medals.append("🥇 Erster Schritt (Lernen)")
+                st.session_state.medals.append("🥇 Erster Schritt (Lernen) - Du hast dein erstes Video hochgeladen!")
+            if st.session_state.streak_lernen == 5:
+                st.session_state.medals.append("🧠 Lern-Maschine - 5 Tage hintereinander gelernt!")
+                
             st.success("Super! Dein Tracker wurde erhöht.")
             st.rerun()
 
@@ -115,15 +152,20 @@ elif app_mode == "💪 Fitness & Ernährung":
     fett = int(grundumsatz * 0.3 / 9)
     
     st.markdown(f"""
-    > 📊 **Dein berechneter täglicher Bedarf:**
-    > * **Kalorien:** ca. {grundumsatz} kcal | **Eiweiß:** {protein}g | **Kohlenhydrate:** {kohlenhydrate}g | **Fett:** {fett}g
-    """)
+    <div class='stat-box'>
+        <h4>📊 Dein berechneter täglicher Bedarf:</h4>
+        <p>• <b>Kalorien:</b> ca. {grundumsatz} kcal</p>
+        <p>• <b>Eiweiß (Proteine):</b> {protein}g</p>
+        <p>• <b>Kohlenhydrate:</b> {kohlenhydrate}g</p>
+        <p>• <b>Fett:</b> {fett}g</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.write("---")
     st.subheader("🍎 Ernährungs-Tracker")
     
     with st.form(key='food_form', clear_on_submit=True):
-        speise = st.text_input("Was hast du gegessen/getrunken?")
+        speise = st.text_input("Was hast du gegessen/getrunken? (Feld resettet sich nach Eingabe)")
         submit_food = st.form_submit_button("Hinzufügen")
         
         if submit_food and speise:
@@ -148,51 +190,59 @@ elif app_mode == "💪 Fitness & Ernährung":
 
     st.write("---")
     st.subheader("⏳ Fitness-Tracker")
-    st.write(f"🔥 Aktueller Fitness-Streak: **{st.session_state.streak_fitness}**")
+    st.markdown(f"<div class='stat-box'>🔥 Aktueller Fitness-Streak: <b>{st.session_state.streak_fitness} Tage</b></div>", unsafe_allow_html=True)
     
     video_file_fit = st.file_uploader("Lade ein 5-Minuten-Workout-Video hoch", type=["mp4", "mov"], key="fit_vid")
     if video_file_fit is not None:
         if st.button("Workout bestätigen & Tracker +1"):
             st.session_state.streak_fitness += 1
             st.session_state.last_activity = datetime.date.today()
+            
             if st.session_state.streak_fitness == 1:
-                st.session_state.medals.append("🏅 Erste Trainingseinheit")
+                st.session_state.medals.append("🏅 Erste Trainingseinheit - Aller Anfang ist gemacht!")
+            if st.session_state.streak_fitness == 5:
+                st.session_state.medals.append("⚡ Fitness-Champ - 5 Workouts eingereicht!")
+                
             st.success("Stark! Dein Fitness-Tracker ist gestiegen.")
             st.rerun()
 
 
 # =====================================================================
-# ALLGEMEINER CHATBOT (Nutzt jetzt die echte OpenAI API)
+# MODUS 3: EIGENER AUSWÄHLPUNKT FÜR MEDAILLEN
 # =====================================================================
-st.write("---")
-st.subheader("💬 Dein All-in-One AI Chatbot")
-
-user_message = st.chat_input("Frag mich etwas...")
-if user_message:
-    st.session_state.chat_history.append(("Du", user_message))
+elif app_mode == "🏆 Meine Medaillen & Erfolge":
+    st.title("🏆 Dein Trophäenschrank")
+    st.write("Hier werden alle deine Medaillen aufgelistet, die du durch das Hochladen von Videos im Lern- oder Fitnessbereich verdienst.")
     
-    with st.spinner("KI tippt..."):
-        # Kontext-Prompt je nach Modus
-        if app_mode == "📚 Lernen & Schule":
-            system_context = f"Du bist ein hilfreicher Lern-Bot für die {klassenstufe}. Beantworte diese Frage kurz und verständlich: {user_message}"
-        else:
-            system_context = f"Du bist ein Fitness- und Ernährungscoach. Der Nutzer ist {alter} Jahre alt, {groesse}cm groß und wiegt {gewicht}kg. Beantworte diese Frage: {user_message}"
-            
-        ai_response = get_ai_response(system_context)
-        st.session_state.chat_history.append(("AI", ai_response))
-
-for rolle, text in st.session_state.chat_history[-6:]:
-    with st.chat_message("user" if rolle == "Du" else "assistant"):
-        st.write(f"**{rolle}:** {text}")
+    st.subheader("Deine Auszeichnungen:")
+    
+    if st.session_state.medals:
+        for medal in sorted(list(set(st.session_state.medals))):
+            st.markdown(f"<div class='medal-card'>{medal}</div>", unsafe_allow_html=True)
+    else:
+        st.info("Du hast noch keine Medaillen verdient. Lade in den anderen Modi Videos hoch, um Erfolge freizuschalten! 🚀")
 
 
 # =====================================================================
-# BELOHNUNGSSYSTEM (MEDAILLEN)
+# ALLGEMEINER CHATBOT (Sichtbar im Lern- und Fitnessmodus)
 # =====================================================================
-st.sidebar.write("---")
-st.sidebar.title("🏆 Deine Medaillen")
-if st.session_state.medals:
-    for medal in set(st.session_state.medals):
-        st.sidebar.write(medal)
-else:
-    st.sidebar.write("Noch keine Medaillen. Leg los! 🚀")
+if app_mode != "🏆 Meine Medaillen & Erfolge":
+    st.write("---")
+    st.subheader("💬 Dein All-in-One AI Chatbot")
+
+    user_message = st.chat_input("Frag mich etwas...")
+    if user_message:
+        st.session_state.chat_history.append(("Du", user_message))
+        
+        with st.spinner("KI antwortet..."):
+            if app_mode == "📚 Lernen & Schule":
+                system_context = f"Du bist ein hilfreicher Lern-Bot für die {klassenstufe}. Beantworte diese Frage kurz und verständlich: {user_message}"
+            else:
+                system_context = f"Du bist ein Fitness- und Ernährungscoach. Der Nutzer ist {alter} Jahre alt, {groesse}cm groß und wiegt {gewicht}kg. Beantworte diese Frage: {user_message}"
+                
+            ai_response = get_ai_response(system_context)
+            st.session_state.chat_history.append(("AI", ai_response))
+
+    for rolle, text in st.session_state.chat_history[-6:]:
+        with st.chat_message("user" if rolle == "Du" else "assistant"):
+            st.write(f"**{rolle}:** {text}")
