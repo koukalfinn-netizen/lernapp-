@@ -58,27 +58,27 @@ bg_color = st.sidebar.color_picker("Dashboard-Farbe", "#121212")
 text_color = st.sidebar.color_picker("Text-Farbe", "#FFFFFF")
 accent_color = "#2ECC71" 
 
-# CSS für moderne Schriften und Kacheln
-st.markdown(f"""
+# CSS für moderne Schriften und Kacheln (Fehlerfrei escaped durch Verzicht auf f-String Konflikte)
+st.markdown("""
     <style>
-    html, body, [data-testid="stSidebar"], .stApp {{
+    html, body, [data-testid="stSidebar"], .stApp {
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-        background-color: {bg_color} !important;
-        color: {text_color} !important;
-    }}
-    h1, h2, h3, h4, h5, h6 {{
+        background-color: """ + bg_color + """ !important;
+        color: """ + text_color + """ !important;
+    }
+    h1, h2, h3, h4, h5, h6 {
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-        color: {text_color} !important;
+        color: """ + text_color + """ !important;
         font-weight: 700;
-    }}
-    .stat-box {{
+    }
+    .stat-box {
         background-color: rgba(255, 255, 255, 0.05);
         padding: 20px;
         border-radius: 10px;
-        border-left: 5px solid {accent_color};
+        border-left: 5px solid """ + accent_color + """;
         margin-bottom: 15px;
-    }}
-    .medal-card {{
+    }
+    .medal-card {
         background-color: rgba(255, 215, 0, 0.1);
         padding: 15px;
         border-radius: 8px;
@@ -86,7 +86,7 @@ st.markdown(f"""
         margin: 10px 0px;
         font-size: 1.1rem;
         font-weight: bold;
-    }}
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -131,7 +131,7 @@ if app_mode == "📚 Lernen & Schule":
         st.session_state.klassenstufe = selected_klasse
         st.rerun()
         
-    st.markdown(f"<div class='stat-box'><b>Aktiver Modus:</b> {st.session_state.klassenstufe}</div>", unsafe_allow_html=True)
+    st.markdown(f'<div class="stat-box"><b>Aktiver Modus:</b> {st.session_state.klassenstufe}</div>', unsafe_allow_html=True)
     
     st.subheader("📝 KI-Lernunterlagen erstellen")
     themen_input = st.text_input("Gib dein Thema ein (z.B. 'Fotosynthese')")
@@ -139,45 +139,82 @@ if app_mode == "📚 Lernen & Schule":
     
     if st.button("Generieren") and themen_input:
         with st.spinner("🧠 Verknüpfe Bibliotheksdaten... Baue Struktur auf..."):
-            time.sleep(random.uniform(1.2, 2.2)) # Simulierter Denkprozess im Hintergrund
+            time.sleep(random.uniform(1.2, 2.2))
             
             clean_topic = themen_input.strip().title()
             
             if erstellungs_typ == "Lernzettel":
+                # Optimierte strukturierte Vorlage kombiniert mit KI-Prompt-Inhalten
+                prompt_details = f"Erstelle stichpunktartig wichtige Fakten und Stolpersteine für das Thema '{clean_topic}' angepasst an eine {st.session_state.klassenstufe}. Halte es übersichtlich."
+                ki_fakten = get_ai_response(prompt_details)
+                
                 antwort = f"""
-                # 📝 Professioneller Lernzettel: {clean_topic}
-                *Optimiert für dein Niveau: {st.session_state.klassenstufe}*
-                
-                ---
-                ### 🔍 Overview & Kernkonzept
-                Wenn Lehrer nach **{clean_topic}** fragen, wollen sie sehen, dass du das übergeordnete Prinzip verstanden hast. Es ist kein reines Auswendiglernen, sondern ein logischer Prozess.
-                
-                ### 📑 Strukturierte Lern-Timeline
-                * **Schritt 1: Grundlagen** Der Einstieg in das Thema. Merk dir hierzu die goldene Regel: Jedes System sucht ein Gleichgewicht oder folgt einer festen Formel.
-                * **Schritt 2: Relevanz** Lehrer lieben Querverbindungen. Setze dieses Thema immer in Bezug zu dem, was ihr im Vormonat besprochen habt.
-                * **Schritt 3: Stolpersteine** *Achtung Gefahr!* In Klausuren fallen viele darauf rein, Details zu vertauschen. Lies die Aufgabenstellung hierzu immer doppelt.
-                
-                ### 💡 Praxis-Transfer
-                Stell dir {clean_topic} wie ein Zahnrad vor: Fällt dieser Baustein weg, stoppt der gesamte biologische, historische oder mathematische Ablauf.
-                
-                ### 🎓 Mein persönlicher Top-Tipp für dich:
-                > "Erkläre dieses Blatt heute Abend kurz jemandem aus deiner Familie in deinen eigenen Worten. Wenn du das schaffst, sitzt der Stoff bombensicher für eine 1!"
-                """
+# 📝 Professioneller Lernzettel: {clean_topic}
+*Optimiert für dein Niveau: {st.session_state.klassenstufe}*
+
+---
+### 🔍 Overview & Kernkonzept
+Wenn Lehrer nach **{clean_topic}** fragen, wollen sie sehen, dass du das übergeordnete Prinzip verstanden hast. Es ist kein reines Auswendiglernen, sondern ein logischer Prozess.
+
+### 📑 KI-generierte Kernfakten & Details
+{ki_fakten}
+
+### 💡 Praxis-Transfer & Merkhilfe
+Stell dir {clean_topic} wie ein wichtiges Zahnrad vor: Fällt dieser Baustein weg, stoppt der gesamte biologische, historische oder mathematische Ablauf des Systems.
+
+### 🎓 Mein persönlicher Top-Tipp für dich:
+> "Erkläre dieses Blatt heute Abend kurz jemandem aus deiner Familie in deinen eigenen Worten. Wenn du das schaffst, sitzt der Stoff bombensicher für eine 1!"
+"""
             else:
+                prompt_quiz = f"Erstelle ein interaktives Quiz mit 3 Fragen und kurzen Antwortmöglichkeiten zum Thema '{clean_topic}' für die {st.session_state.klassenstufe}."
+                ki_quiz = get_ai_response(prompt_quiz)
+                
                 antwort = f"""
-                # 🧪 Interaktives KI-Quiz: {clean_topic}
-                *Niveau: {st.session_state.klassenstufe}*
-                
-                Fordere dein Gehirn heraus. Kannst du diese 3 Fragen fehlerfrei beantworten?
-                
-                1.  **Frage 1:** Was ist das absolute Fundament von *{clean_topic}*, ohne das das Thema keinen Sinn ergibt?
-                2.  **Frage 2:** Welcher typische Fehler passiert Schülern der *{st.session_state.klassenstufe}* bei dieser Fragestellung am häufigsten?
-                3.  **Frage 3:** Wie lässt sich *{clean_topic}* an einem einfachen Alltagsbeispiel erklären?
-                """
+# 🧪 Interaktives KI-Quiz: {clean_topic}
+*Niveau: {st.session_state.klassenstufe}*
+
+Fordere dein Gehirn heraus. Kannst du diese Fragen fehlerfrei beantworten?
+
+{ki_quiz}
+"""
                 
             st.markdown("### Dein generiertes Dokument")
             st.markdown(antwort)
 
     st.write("---")
     st.subheader("⏳ Lern-Tracker")
-    st.markdown(f"<div class='stat-box'>🔥 Aktueller Lern-Streak
+    st.markdown(f'<div class="stat-box">🔥 Aktueller Lern-Streak: <b>{st.session_state.streak_lernen} Tage</b></div>', unsafe_allow_html=True)
+    
+    video_file_learn = st.file_uploader("Lade ein 5-Minuten-Lernvideo hoch", type=["mp4", "mov"], key="learn_vid")
+    if video_file_learn is not None:
+        if st.button("Video bestätigen & Tracker +1"):
+            st.session_state.streak_lernen += 1
+            st.session_state.last_activity = datetime.date.today()
+            
+            if st.session_state.streak_lernen == 1:
+                st.session_state.medals.append("🥇 Erster Schritt (Lernen) - Du hast dein erstes Video hochgeladen!")
+            if st.session_state.streak_lernen == 5:
+                st.session_state.medals.append("🧠 Lern-Maschine - 5 Tage hintereinander gelernt!")
+                
+            st.success("Super! Dein Tracker wurde erhöht.")
+            st.rerun()
+
+
+# =====================================================================
+# MODUS 2: FITNESS & ERNÄHRUNG
+# =====================================================================
+elif app_mode == "💪 Fitness & Ernährung":
+    st.title("💪 AI Fitness & Ernährungs-Coach")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1: 
+        input_alter = st.number_input("Alter", min_value=10, max_value=100, value=st.session_state.alter)
+    with col2: 
+        input_groesse = st.number_input("Größe (in cm)", min_value=100, max_value=250, value=st.session_state.groesse)
+    with col3: 
+        input_gewicht = st.number_input("Gewicht (in kg)", min_value=30, max_value=200, value=st.session_state.gewicht)
+        
+    if input_alter != st.session_state.alter or input_groesse != st.session_state.groesse or input_gewicht != st.session_state.gewicht:
+        st.session_state.alter = input_alter
+        st.session_state.groesse = input_groesse
+        st.session_state.
