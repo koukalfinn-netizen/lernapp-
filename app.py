@@ -1,14 +1,9 @@
 import streamlit as st
 import datetime
-import os
 from openai import OpenAI
-from streamlit_local_storage import StLocalStorage
 
 # --- SEITENKONFIGURATION & STYLING ---
 st.set_page_config(page_title="AI Learn & Fit Hub", page_icon="⚡", layout="wide")
-
-# Lokalen Speicher des Browsers aktivieren
-local_storage = StLocalStorage()
 
 # --- INITIALISIERUNG SESSION STATE ---
 if "chat_history" not in st.session_state:
@@ -23,26 +18,19 @@ if "medals" not in st.session_state:
     st.session_state.medals = []
 if "last_activity" not in st.session_state:
     st.session_state.last_activity = datetime.date.today()
+if "openai_key" not in st.session_state:
+    st.session_state.openai_key = ""
 
-# --- SIDEBAR: DOCK FÜR DEN API KEY (DAUERHAFT) ---
-st.sidebar.title("🔑 AI Schlüssel (Speichert dauerhaft)")
+# --- SIDEBAR: DOCK FÜR DEN API KEY ---
+st.sidebar.title("🔑 AI Schlüssel")
+# Der Key wird im Session-State behalten, solange die App läuft
+api_key_input = st.sidebar.text_input("Dein OpenAI Key:", value=st.session_state.openai_key, type="password")
 
-# Versuchen, den Key aus dem Browser-Speicher zu laden
-saved_key = local_storage.get("user_openai_key")
-if saved_key is None:
-    saved_key = ""
+if api_key_input != st.session_state.openai_key:
+    st.session_state.openai_key = api_key_input
+    st.rerun()
 
-# Eingabefeld in der Sidebar
-api_key_input = st.sidebar.text_input("Dein OpenAI Key:", value=saved_key, type="password")
-
-if st.sidebar.button("🔑 Key im Browser sichern"):
-    if api_key_input:
-        local_storage.set("user_openai_key", api_key_input)
-        st.sidebar.success("Schlüssel dauerhaft gesichert! 🎉")
-        st.rerun()
-
-# Setze den aktiven Key für die App
-OPENAI_API_KEY = api_key_input
+OPENAI_API_KEY = st.session_state.openai_key
 
 # --- SIDEBAR: NAVIGATION & DESIGN ---
 st.sidebar.write("---")
@@ -93,7 +81,7 @@ st.markdown(f"""
 # Hilfsfunktion für echte KI-Abfragen
 def get_ai_response(prompt_text):
     if not OPENAI_API_KEY:
-        return "⚠️ Bitte trage zuerst deinen OpenAI Key links in der Sidebar ein und klicke auf 'Sichern'!"
+        return "⚠️ Bitte trage zuerst deinen OpenAI Key links in der Sidebar ein!"
     try:
         client = OpenAI(api_key=OPENAI_API_KEY)
         response = client.chat.completions.create(
@@ -246,7 +234,7 @@ elif app_mode == "🏆 Meine Medaillen & Erfolge":
 
 
 # =====================================================================
-# ALLGEMEINER CHATBOT (Nutzt den dynamisch geladenen Key)
+# ALLGEMEINER CHATBOT
 # =====================================================================
 if app_mode != "🏆 Meine Medaillen & Erfolge":
     st.write("---")
