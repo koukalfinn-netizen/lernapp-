@@ -31,7 +31,6 @@ bg_color = st.sidebar.color_picker("Dashboard-Farbe", "#121212")
 text_color = st.sidebar.color_picker("Text-Farbe", "#FFFFFF")
 accent_color = "#2ECC71" 
 
-# Dynamisches CSS basierend auf deinen Farbreglern
 st.markdown(f"""
     <style>
     html, body, [data-testid="stSidebar"], .stApp {{
@@ -70,138 +69,65 @@ app_mode = st.sidebar.selectbox("Bereich auswählen", [
     "📅 Abendliche Tageszusammenfassung"
 ])
 
-# --- KI BACKEND (SIMULIERTER DENKPROZESS - KEYLESS) ---
+# --- KI BACKEND (INTELLIGENTE BIBLIOTHEKS-VORLAGEN - KEYLESS) ---
 def execute_background_thought(mode, topic=""):
-    with st.spinner("🧠 Analysiere Profildaten... Generiere optimales Feedback..."):
+    with st.spinner("🧠 Generiere logische Verknüpfungen... Baue maßgeschneiderte Struktur auf..."):
         time.sleep(random.uniform(1.5, 2.5)) 
     
+    clean_topic = topic.strip().title()
+    
     if mode == "lernzettel":
-        return f"### 📝 KI-Lernunterlage: {topic}\n\n*Optimiert für: {st.session_state.klassenstufe}*\n\n1. **Kernkonzept:** Grundlegende Definition und Relevanz für deine nächste Arbeit.\n2. **Wichtige Fakten:** Achte in Prüfungen besonders auf die Zusammenhänge.\n3. **Coach-Tipp:** Schreib dir diese Kernpunkte einmal handschriftlich auf!"
+        # Hier greift die "AI" auf vordefinierte Wissensstrukturen zurück und kombiniert sie so, wie ich es tun würde
+        unterpunkte = [
+            f"Grundlagen und Definition von {clean_topic}",
+            f"Warum {clean_topic} im Lehrplan der {st.session_state.klassenstufe} entscheidend ist",
+            f"Häufige Stolpersteine und Denkfehler in Klassenarbeiten",
+            f"Praxisbeispiel zur Veranschaulichung"
+        ]
+        
+        return f"""
+        # 📝 Professioneller Lernzettel: {clean_topic}
+        *Erstellt nach meinem optimalen KI-Lernsystem für die {st.session_state.klassenstufe}*
+        
+        ---
+        ### 🔍 Overview & Kernkonzept
+        Wenn Lehrer nach **{clean_topic}** fragen, wollen sie sehen, dass du das übergeordnete Prinzip verstanden hast. Es ist kein reines Auswendiglernen, sondern ein logischer Prozess.
+        
+        ### 📑 Strukturierte Lern-Timeline
+        * **Schritt 1: {unterpunkte[0]}** Der Einstieg in das Thema. Merk dir hierzu die goldene Regel: Jedes System sucht ein Gleichgewicht oder folgt einer festen Formel.
+        * **Schritt 2: {unterpunkte[1]}** Lehrer lieben Querverbindungen. Setze dieses Thema immer in Bezug zu dem, was ihr im Vormonat besprochen habt.
+        * **Schritt 3: {unterpunkte[2]}** *Achtung Gefahr!* In Klausuren fallen viele darauf rein, Details zu vertauschen. Lies die Aufgabenstellung hierzu immer doppelt.
+        
+        ### 💡 Praxis-Transfer ({unterpunkte[3]})
+        Stell dir {clean_topic} wie ein Zahnrad vor: Fällt dieser Baustein weg, stoppt der gesamte biologische, historische oder mathematische Ablauf.
+        
+        ### 🎓 Mein persönlicher Top-Tipp für dich:
+        > "Erkläre dieses Blatt heute Abend kurz jemanden aus deiner Familie in deinen eigenen Worten. Wenn du das schaffst, sitzt der Stoff bombensicher für eine 1!"
+        """
         
     elif mode == "quiz":
-        return f"### 🧪 KI-Wissenscheck: {topic}\n\n*Niveau: {st.session_state.klassenstufe}*\n\n* **Frage 1:** Was ist die Hauptursache für die Prozesse hinter {topic}?\n* **Frage 2:** Wie beeinflusst dieses Thema andere Bereiche im Fach?\n* **Frage 3:** Erkläre das Prinzip in einem kurzen Satz."
+        return f"""
+        # 🧪 Interaktives KI-Quiz: {clean_topic}
+        *Niveau: {st.session_state.klassenstufe}*
+        
+        Fordere dein Gehirn heraus. Kannst du diese 3 Fragen fehlerfrei beantworten?
+        
+        1.  **Frage 1:** Was ist das absolute Fundament von *{clean_topic}*, ohne das das Thema keinen Sinn ergibt?
+        2.  **Frage 2:** Welcher typische Fehler passiert Schülern der *{st.session_state.klassenstufe}* bei dieser Fragestellung am häufigsten?
+        3.  **Frage 3:** Wie lässt sich *{clean_topic}* an einem einfachen Alltagsbeispiel erklären?
+        """
         
     elif mode == "essen_feedback":
-        healthy = ["salat", "wasser", "hähnchen", "apfel", "quark", "gemüse", "fisch", "reis", "ei", "banane"]
-        unhealthy = ["cola", "pizza", "burger", "chips", "schokolade", "red bull", "döner", "fanta", "sprite"]
+        healthy = ["salat", "wasser", "hähnchen", "apfel", "quark", "gemüse", "fisch", "reis", "ei", "banane", "haferflocken", "brokkoli"]
+        unhealthy = ["cola", "pizza", "burger", "chips", "schokolade", "red bull", "döner", "fanta", "sprite", "snickers", "nutella"]
         
         text_lower = topic.lower()
         if any(x in text_lower for x in healthy):
-            return f"🟢 **Lob vom Coach:** Überragende Wahl! '{topic}' liefert perfekte Nährstoffe für deinen Körper ({st.session_state.gewicht}kg). Das gibt dir Power ohne Crash!"
+            return f"🟢 **Lob vom Coach:** Überragende Wahl! '{clean_topic}' liefert perfekte Nährstoffe für deinen Körper ({st.session_state.gewicht}kg). Das gibt dir Power ohne anschließenden Energie-Crash!"
         elif any(x in text_lower for x in unhealthy):
-            return f"🔴 **Kritik vom Coach:** Aufgepasst! '{topic}' liefert dir fast nur leere Kalorien und Zucker. Das blockiert deinen Fokus beim Lernen und wirft dich im Training zurück."
+            return f"🔴 **Kritik vom Coach:** Aufgepasst! '{clean_topic}' liefert dir fast nur leere Kalorien und schnellen Zucker. Das blockiert deinen Fokus beim Lernen und wirft dich im Training zurück."
         else:
-            return f"🟡 **Hinweis vom Coach:** '{topic}' ist als neutraler Snack okay. Achte darauf, über den Tag genug Proteine einzubauen."
+            return f"🟡 **Hinweis vom Coach:** '{clean_topic}' ist als neutraler Snack okay. Achte darauf, über den restlichen Tag verteilt genug Proteine und unverarbeitete Lebensmittel einzubauen."
 
     elif mode == "tages_fazit":
-        mahlzeiten = ", ".join(st.session_state.consumed_food) if st.session_state.consumed_food else "Keine Mahlzeiten eingetragen"
-        
-        if st.session_state.streak_lernen > 0 and st.session_state.streak_fitness > 0:
-            status = "🔥 Absoluter Champion-Tag! Du hast für Kopf und Körper voll abgeliefert!"
-        elif st.session_state.streak_lernen == 0 and st.session_state.streak_fitness == 0:
-            status = "⚠️ Faulheits-Alarm: Heute steht alles auf Null. Morgen erwarte ich deutlich mehr Disziplin!"
-        else:
-            status = "⚖️ Halbe Kraft: Ein Bereich lief gut, der andere wurde vernachlässigt. Such die Balance!"
-
-        return f"### 📋 Dein ehrliches Tages-Fazit\n\n* **Status:** {status}\n* **Klassenstufe:** {st.session_state.klassenstufe}\n* **Lern-Streak:** {st.session_state.streak_lernen} Tage\n* **Fitness-Streak:** {st.session_state.streak_fitness} Tage\n* **Ernährung heute:** {mahlzeiten}\n\n*🎯 Coach-Spruch für morgen:* Disziplin bedeutet, das zu tun, was getan werden muss, auch wenn man keine Lust hat!"
-
-# Tracker Reset Logik bei Inaktivität
-if (datetime.date.today() - st.session_state.last_activity).days >= 2:
-    st.session_state.streak_fitness = 0
-    st.session_state.streak_lernen = 0
-
-# =====================================================================
-# MODUS 1: LERNEN & SCHULE
-# =====================================================================
-if app_mode == "📚 Lernen & Schule":
-    st.title("📚 AI Lern-Zentrum")
-    
-    klassenstufen = [f"Klasse {i}" for i in range(1, 13)]
-    st.session_state.klassenstufe = st.selectbox("Klassenstufe wählen", klassenstufen, index=klassenstufen.index(st.session_state.klassenstufe))
-    
-    st.write("")
-    thema = st.text_input("Gib dein Thema ein (z.B. 'Fotosynthese')")
-    erstellungs_typ = st.radio("Was soll im Hintergrund berechnet werden?", ["Lernzettel", "Quiz"])
-    
-    if st.button("Generieren") and thema:
-        antwort = execute_background_thought(erstellungs_typ.lower(), thema)
-        st.markdown(antwort)
-
-    st.write("---")
-    st.subheader("⏳ Lern-Tracker")
-    st.markdown(f"<div class='stat-box'>🔥 Aktueller Lern-Streak: <b>{st.session_state.streak_lernen} Tage</b></div>", unsafe_allow_html=True)
-    
-    if st.file_uploader("Lade ein 5-Minuten-Lernvideo hoch", type=["mp4", "mov"], key="learn_vid"):
-        if st.button("Video bestätigen & Tracker +1"):
-            st.session_state.streak_lernen += 1
-            st.session_state.last_activity = datetime.date.today()
-            if st.session_state.streak_lernen == 1:
-                st.session_state.medals.append("🥇 Erster Schritt (Lernen) - Erstes Video eingereicht!")
-            st.success("Erfolg verbucht!")
-            st.rerun()
-
-# =====================================================================
-# MODUS 2: FITNESS & ERNÄHRUNG
-# =====================================================================
-elif app_mode == "💪 Fitness & Ernährung":
-    st.title("💪 AI Fitness & Ernährungs-Coach")
-    
-    col1, col2, col3 = st.columns(3)
-    st.session_state.alter = col1.number_input("Alter", min_value=10, value=st.session_state.alter)
-    st.session_state.groesse = col2.number_input("Größe (in cm)", min_value=100, value=st.session_state.groesse)
-    st.session_state.gewicht = col3.number_input("Gewicht (in kg)", min_value=30, value=st.session_state.gewicht)
-    
-    st.write("---")
-    st.subheader("🍎 Ernährungs-Tracker mit Live-Feedback")
-    
-    with st.form(key='food_form', clear_on_submit=True):
-        speise = st.text_input("Was hast du gegessen/getrunken?")
-        submit_food = st.form_submit_button("Hinzufügen & Auswerten")
-        
-        if submit_food and speise:
-            st.session_state.consumed_food.append(speise)
-            st.session_state["latest_feedback"] = execute_background_thought("essen_feedback", speise)
-            st.rerun()
-
-    if "latest_feedback" in st.session_state:
-        st.markdown(st.session_state["latest_feedback"])
-
-    if st.session_state.consumed_food:
-        st.write("**Heutige Mahlzeiten:**")
-        for item in st.session_state.consumed_food:
-            st.write(f"• {item}")
-            
-    st.write("---")
-    st.subheader("⏳ Fitness-Tracker")
-    st.markdown(f"<div class='stat-box'>🔥 Aktueller Fitness-Streak: <b>{st.session_state.streak_fitness} Tage</b></div>", unsafe_allow_html=True)
-    
-    if st.file_uploader("Lade ein Workout-Video hoch", type=["mp4", "mov"], key="fit_vid"):
-        if st.button("Workout bestätigen & Tracker +1"):
-            st.session_state.streak_fitness += 1
-            st.session_state.last_activity = datetime.date.today()
-            if st.session_state.streak_fitness == 1:
-                st.session_state.medals.append("🏅 Erste Trainingseinheit - Sportstreak gestartet!")
-            st.success("Stark! Tracker erhöht.")
-            st.rerun()
-
-# =====================================================================
-# MODUS 3: MEDAILLEN
-# =====================================================================
-elif app_mode == "🏆 Meine Medaillen & Erfolge":
-    st.title("🏆 Dein Trophäenschrank")
-    if st.session_state.medals:
-        for medal in sorted(list(set(st.session_state.medals))):
-            st.markdown(f"<div class='medal-card'>{medal}</div>", unsafe_allow_html=True)
-    else:
-        st.info("Noch keine Medaillen verdient. Leg los und lade Aktivitäts-Videos hoch! 🚀")
-
-# =====================================================================
-# MODUS 4: ABENDLICHE TAGESZUSAMMENFASSUNG
-# =====================================================================
-elif app_mode == "📅 Abendliche Tageszusammenfassung":
-    st.title("📅 Deine Tagesbilanz")
-    st.write("Fordere hier am Ende deines Tages dein ehrliches Zeugnis an.")
-    
-    if st.button("📊 Tagesbericht generieren"):
-        bericht = execute_background_thought("tages_fazit")
-        st.markdown(bericht)
+        ma
