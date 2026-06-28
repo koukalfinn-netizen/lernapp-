@@ -5,7 +5,7 @@ from openai import OpenAI
 # --- SEITENKONFIGURATION & STYLING ---
 st.set_page_config(page_title="AI Learn & Fit Hub", page_icon="⚡", layout="wide")
 
-# --- INITIALISIERUNG SESSION STATE ---
+# --- INITIALISIERUNG SESSION STATE (MERKFUNKTION) ---
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 if "consumed_food" not in st.session_state:
@@ -21,9 +21,18 @@ if "last_activity" not in st.session_state:
 if "openai_key" not in st.session_state:
     st.session_state.openai_key = ""
 
+# Hier werden deine persönlichen Daten dauerhaft in der Sitzung gespeichert:
+if "klassenstufe" not in st.session_state:
+    st.session_state.klassenstufe = "Klasse 5"
+if "alter" not in st.session_state:
+    st.session_state.alter = 16
+if "groesse" not in st.session_state:
+    st.session_state.groesse = 170
+if "gewicht" not in st.session_state:
+    st.session_state.gewicht = 65
+
 # --- SIDEBAR: DOCK FÜR DEN API KEY ---
 st.sidebar.title("🔑 AI Schlüssel")
-# Der Key wird im Session-State behalten, solange die App läuft
 api_key_input = st.sidebar.text_input("Dein OpenAI Key:", value=st.session_state.openai_key, type="password")
 
 if api_key_input != st.session_state.openai_key:
@@ -38,7 +47,8 @@ st.sidebar.title("🎛️ Navigation")
 app_mode = st.sidebar.selectbox("Bereich auswählen", [
     "📚 Lernen & Schule", 
     "💪 Fitness & Ernährung",
-    "🏆 Meine Medaillen & Erfolge"
+    "🏆 Meine Medaillen & Erfolge",
+    "📅 Abendliche Tageszusammenfassung" # Neuer Bereich hinzugefügt!
 ])
 
 st.sidebar.title("🎨 Design & Farben")
@@ -111,8 +121,16 @@ if st.sidebar.button("🔴 Tracker manuell zurücksetzen"):
 if app_mode == "📚 Lernen & Schule":
     st.title("📚 AI Lern-Zentrum")
     
-    klassenstufe = st.selectbox("Klassenstufe wählen", [f"Klasse {i}" for i in range(1, 13)])
-    st.markdown(f"<div class='stat-box'><b>Aktiver Modus:</b> {klassenstufe}</div>", unsafe_allow_html=True)
+    # Klassenstufe wird jetzt im Session State gespeichert und bleibt gemerkt
+    klassenstufen_liste = [f"Klasse {i}" for i in range(1, 13)]
+    default_index = klassenstufen_liste.index(st.session_state.klassenstufe) if st.session_state.klassenstufe in klassenstufen_liste else 4
+    
+    selected_klasse = st.selectbox("Klassenstufe wählen", klassenstufen_liste, index=default_index)
+    if selected_klasse != st.session_state.klassenstufe:
+        st.session_state.klassenstufe = selected_klasse
+        st.rerun()
+        
+    st.markdown(f"<div class='stat-box'><b>Aktiver Modus:</b> {st.session_state.klassenstufe}</div>", unsafe_allow_html=True)
     
     st.subheader("📝 KI-Lernunterlagen erstellen")
     themen_input = st.text_input("Gib dein Thema ein (z.B. 'Fotosynthese')")
@@ -120,7 +138,7 @@ if app_mode == "📚 Lernen & Schule":
     
     if st.button("Generieren"):
         with st.spinner("KI generiert deine Unterlagen..."):
-            prompt = f"Erstelle einen ausführlichen {erstellungs_typ} zum Thema '{themen_input}' für die {klassenstufe} in der Schule. Strukturiere es übersichtlich mit Überschriften."
+            prompt = f"Erstelle einen ausführlichen {erstellungs_typ} zum Thema '{themen_input}' für die {st.session_state.klassenstufe} in der Schule. Strukturiere es übersichtlich mit Überschriften."
             antwort = get_ai_response(prompt)
             st.markdown("### Dein generiertes Dokument")
             st.write(antwort)
@@ -150,14 +168,24 @@ if app_mode == "📚 Lernen & Schule":
 elif app_mode == "💪 Fitness & Ernährung":
     st.title("💪 AI Fitness & Ernährungs-Coach")
     
+    # Werte werden direkt aus dem Session State geladen und abgespeichert
     col1, col2, col3 = st.columns(3)
-    with col1: alter = st.number_input("Alter", min_value=10, max_value=100, value=16)
-    with col2: groesse = st.number_input("Größe (in cm)", min_value=100, max_value=250, value=170)
-    with col3: gewicht = st.number_input("Gewicht (in kg)", min_value=30, max_value=200, value=65)
+    with col1: 
+        input_alter = st.number_input("Alter", min_value=10, max_value=100, value=st.session_state.alter)
+    with col2: 
+        input_groesse = st.number_input("Größe (in cm)", min_value=100, max_value=250, value=st.session_state.groesse)
+    with col3: 
+        input_gewicht = st.number_input("Gewicht (in kg)", min_value=30, max_value=200, value=st.session_state.gewicht)
+        
+    if input_alter != st.session_state.alter or input_groesse != st.session_state.groesse or input_gewicht != st.session_state.gewicht:
+        st.session_state.alter = input_alter
+        st.session_state.groesse = input_groesse
+        st.session_state.gewicht = input_gewicht
+        st.rerun()
     
     # Nährstoffberechnung
-    grundumsatz = int(10 * gewicht + 6.25 * groesse - 5 * alter + 5) 
-    protein = int(gewicht * 1.5)
+    grundumsatz = int(10 * st.session_state.gewicht + 6.25 * st.session_state.groesse - 5 * st.session_state.alter + 5) 
+    protein = int(st.session_state.gewicht * 1.5)
     kohlenhydrate = int(grundumsatz * 0.5 / 4)
     fett = int(grundumsatz * 0.3 / 9)
     
@@ -172,18 +200,26 @@ elif app_mode == "💪 Fitness & Ernährung":
     """, unsafe_allow_html=True)
     
     st.write("---")
-    st.subheader("🍎 Ernährungs-Tracker")
+    st.subheader("🍎 Ernährungs-Tracker mit AI-Feedback")
     
     with st.form(key='food_form', clear_on_submit=True):
-        speise = st.text_input("Was hast du gegessen/getrunken? (Feld resettet sich nach Eingabe)")
-        submit_food = st.form_submit_button("Hinzufügen")
+        speise = st.text_input("Was hast du gegessen/getrunken?")
+        submit_food = st.form_submit_button("Hinzufügen & KI-Feedback erhalten")
         
         if submit_food and speise:
             st.session_state.consumed_food.append(speise)
-            st.toast(f"'{speise}' wurde gespeichert!")
+            
+            # Sofortiges Lob oder Kritik von der KI triggern
+            feedback_prompt = f"Der Nutzer ({st.session_state.alter} Jahre, {st.session_state.groesse}cm, {st.session_state.gewicht}kg) hat gerade folgendes Lebensmittel eingetragen: '{speise}'. Lobe oder kritisiere diese Wahl kurz und knackig (maximal 3 Sätze) basierend auf Fitness und Gesundheit."
+            st.session_state["last_food_feedback"] = get_ai_response(feedback_prompt)
+            st.rerun()
+
+    # Feedback unter dem Formular anzeigen
+    if "last_food_feedback" in st.session_state:
+        st.info(f"💬 **KI-Feedback zu deiner Mahlzeit:**\n\n{st.session_state['last_food_feedback']}")
 
     if st.session_state.consumed_food:
-        st.write("**Von der KI gemerkte Mahlzeiten heute:**")
+        st.write("**Bisherige Mahlzeiten heute:**")
         for item in st.session_state.consumed_food:
             st.write(f"• {item}")
             
@@ -194,7 +230,7 @@ elif app_mode == "💪 Fitness & Ernährung":
     
     if st.button("Kalorien berechnen"):
         with st.spinner("KI berechnet..."):
-            prompt = f"Ein {alter} Jahre alter Mensch ({groesse}cm, {gewicht}kg) hat {dauer} Minuten lang folgende Sportart gemacht: {sportart}. Schätze kurz und präzise, wie viele Kalorien dabei verbrannt wurden."
+            prompt = f"Ein {st.session_state.alter} Jahre alter Mensch ({st.session_state.groesse}cm, {st.session_state.gewicht}kg) hat {dauer} Minuten lang folgende Sportart gemacht: {sportart}. Schätze kurz und präzise, wie viele Kalorien dabei verbrannt wurden."
             antwort = get_ai_response(prompt)
             st.info(antwort)
 
@@ -234,9 +270,36 @@ elif app_mode == "🏆 Meine Medaillen & Erfolge":
 
 
 # =====================================================================
+# MODUS 4: NEU! ABENDLICHE TAGESZUSAMMENFASSUNG
+# =====================================================================
+elif app_mode == "📅 Abendliche Tageszusammenfassung":
+    st.title("📅 Deine Tagesbilanz & KI-Feedback")
+    st.write("Klicke am Ende des Tages hier drauf, um eine vollständige Analyse deiner Leistung zu bekommen. Die KI lobt oder kritisiert dich basierend auf deinen heutigen Aktivitäten.")
+    
+    if st.button("📊 Tageszusammenfassung generieren"):
+        with st.spinner("Die KI wertet deinen Tag aus..."):
+            mahlzeiten_text = ", ".join(st.session_state.consumed_food) if st.session_state.consumed_food else "Keine Mahlzeiten eingetragen"
+            
+            summary_prompt = f"""
+            Du bist ein strenger aber fairer Coach für Fitness und Schule. 
+            Analysiere den Tag des Nutzers anhand folgender Daten:
+            - Alter: {st.session_state.alter} Jahre, Größe: {st.session_state.groesse}cm, Gewicht: {st.session_state.gewicht}kg
+            - Klassenstufe: {st.session_state.klassenstufe}
+            - Heutiger Lern-Streak: {st.session_state.streak_lernen} Tage
+            - Heutiger Fitness-Streak: {st.session_state.streak_fitness} Tage
+            - Gegessene Lebensmittel heute: {mahlzeiten_text}
+            
+            Schreibe eine ehrliche Zusammenfassung des Tages. Lobe den Nutzer ausdrücklich für gute Dinge (z.B. hohe Streaks, gesunde Ernährung) und kritisiere ihn deutlich für schlechte Dinge (z.B. ungesundes Essen oder wenn ein Streak bei 0 steht). Gib am Ende Tipps für morgen.
+            """
+            zusammenfassung = get_ai_response(summary_prompt)
+            st.markdown("### 📝 Deine KI-Auswertung für heute")
+            st.info(zusammenfassung)
+
+
+# =====================================================================
 # ALLGEMEINER CHATBOT
 # =====================================================================
-if app_mode != "🏆 Meine Medaillen & Erfolge":
+if app_mode not in ["🏆 Meine Medaillen & Erfolge", "📅 Abendliche Tageszusammenfassung"]:
     st.write("---")
     st.subheader("💬 Dein All-in-One AI Chatbot")
 
@@ -246,9 +309,9 @@ if app_mode != "🏆 Meine Medaillen & Erfolge":
         
         with st.spinner("KI antwortet..."):
             if app_mode == "📚 Lernen & Schule":
-                system_context = f"Du bist ein hilfreicher Lern-Bot für die {klassenstufe}. Beantworte diese Frage kurz und verständlich: {user_message}"
+                system_context = f"Du bist ein hilfreicher Lern-Bot für die {st.session_state.klassenstufe}. Beantworte diese Frage kurz und verständlich: {user_message}"
             else:
-                system_context = f"Du bist ein Fitness- und Ernährungscoach. Der Nutzer ist {alter} Jahre alt, {groesse}cm groß und wiegt {gewicht}kg. Beantworte diese Frage: {user_message}"
+                system_context = f"Du bist ein Fitness- und Ernährungscoach. Der Nutzer ist {st.session_state.alter} Jahre alt, {st.session_state.groesse}cm groß und wiegt {st.session_state.gewicht}kg. Beantworte diese Frage: {user_message}"
                 
             ai_response = get_ai_response(system_context)
             st.session_state.chat_history.append(("AI", ai_response))
