@@ -12,7 +12,7 @@ import re
 # =========================================================================
 FESTER_API_KEY = "sk-proj-VC0P5MOPeotJSISZshXYEaePtQYCyuqYNuMQGj9N1I-eLkdjwr4lNV-tSKjKSbsJ"
 
-# Globaler OpenAI Client
+# Globaler Client initialisieren
 client = OpenAI(api_key=FESTER_API_KEY)
 
 st.set_page_config(
@@ -91,3 +91,53 @@ if (heute - st.session_state.last_fit_log).days >= 2:
     st.sidebar.error("⚠️ Inaktivität im Sport! Dein Fitness-Streak wurde auf 0 gesetzt.")
 if (heute - st.session_state.last_lern_log).days >= 2:
     st.session_state.lern_streak = 0
+    st.sidebar.error("⚠️ Inaktivität in der Schule! Dein Lern-Streak wurde auf 0 gesetzt.")
+
+# =========================================================================
+# 4. SIDEBAR: CONTROL CENTER & MATRIX FARBSTUDIO
+# =========================================================================
+with st.sidebar:
+    st.title("📲 iPad Control Center")
+    st.markdown("Wähle dein aktives Premium-Modul aus:")
+    modus = st.selectbox(
+        "App auswählen:", 
+        ["🏋️‍♂️ ATHLETE PRO", "🎓 CAMPUS EXPERT", "🏆 MEILENSTEINE & POKALE", "🌆 KI-ABEND-REPORT"]
+    )
+    
+    st.divider()
+    st.markdown("### ⚙️ Profil-Einstellungen")
+    if modus in ["🏋️‍♂️ ATHLETE PRO", "🏆 MEILENSTEINE & POKALE", "🌆 KI-ABEND-REPORT"]:
+        st.session_state.alter = st.number_input("Alter", value=st.session_state.alter, min_value=1, max_value=120)
+        st.session_state.gewicht = st.number_input("Gewicht (kg)", value=st.session_state.gewicht, min_value=1, max_value=300)
+        st.session_state.groesse = st.number_input("Größe (cm)", value=st.session_state.groesse, min_value=50, max_value=250)
+    else:
+        st.session_state.klassenstufe = st.selectbox("Klassenstufe:", [f"{i}. Klasse" for i in range(5, 13)], index=5)
+        
+    st.divider()
+    st.markdown("### 🎨 100+ Farbstudio (RGB Matrix Mixer)")
+    farb_modus = st.radio("Farbwahl-Methode:", ["🎛️ RGB Mixer", "📌 Beliebte Presets"])
+    
+    r_val, g_val, b_val = 30, 30, 30
+    if farb_modus == "🎛️ RGB Mixer":
+        r_val = st.slider("🔴 Rotkanal", 0, 255, 30)
+        g_val = st.slider("🟢 Grünkanal", 0, 255, 30)
+        b_val = st.slider("🔵 Blaukanal", 0, 255, 30)
+        st.session_state.custom_color = f"rgb({r_val}, {g_val}, {b_val})"
+    else:
+        presets = {
+            "⚪ Modernes Grau": "#1e1e1e", 
+            "⚫ Deep Black": "#000000", 
+            "🧪 Neon Grün": "#39ff14", 
+            "🔮 Neon Violett": "#9d00ff", 
+            "🛍️ Neon Pink": "#ff1493", 
+            "☀️ Helles Weiss": "#f5f5f5", 
+            "💛 Helles Gelb": "#fff9a6"
+        }
+        wahl = st.selectbox("Preset auswählen:", list(presets.keys()))
+        st.session_state.custom_color = presets[wahl]
+        if wahl in ["☀️ Helles Weiss", "💛 Helles Gelb"]:
+            r_val, g_val, b_val = 245, 245, 245
+
+# --- INTELLIGENTE SCHRIFTKONTRAST-LOGIK (VERHINDERT FEHLERHAFTE SCHRIFTFARBEN) ---
+luminanz = (r_val * 299 + g_val * 587 + b_val * 114) / 1000
+schrift_farbe = "#000000" if luminanz > 1
