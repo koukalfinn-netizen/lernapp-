@@ -1,143 +1,198 @@
 import streamlit as st
-from PIL import Image
-from openai import OpenAI
-import os
-import base64
-import io
 import datetime
-import re
+from openai import OpenAI
 
-# =========================================================================
-# 1. MANAGEMENT & API AUTHENTIFIZIERUNG
-# =========================================================================
-FESTER_API_KEY = "sk-proj-VC0P5MOPeotJSISZshXYEaePtQYCyuqYNuMQGj9N1I-eLkdjwr4lNV-tSKjKSbsJ"
+# --- SEITENKONFIGURATION & STYLING ---
+st.set_page_config(page_title="AI Learn & Fit Hub", page_icon="⚡", layout="wide")
 
-# Globaler Client initialisieren
-client = OpenAI(api_key=FESTER_API_KEY)
+# Initialisierung des Session States
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+if "consumed_food" not in st.session_state:
+    st.session_state.consumed_food = []
+if "streak_fitness" not in st.session_state:
+    st.session_state.streak_fitness = 0
+if "streak_lernen" not in st.session_state:
+    st.session_state.streak_lernen = 0
+if "medals" not in st.session_state:
+    st.session_state.medals = []
+if "last_activity" not in st.session_state:
+    st.session_state.last_activity = datetime.date.today()
 
-st.set_page_config(
-    page_title="iPad Premium OS Workspace MAX", 
-    page_icon="📲", 
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# --- SIDEBAR: API KEY & PERSONALISIERUNG ---
+st.sidebar.title("🔑 API-Einstellungen")
+# Hier trägst du deinen eigenen Key ein, wenn du die App startest
+openai_api_key = st.sidebar.text_input("Dein OpenAI API Key", type="password")
 
-# Strukturierte Server-Verzeichnisse erstellen
-for ordner in ["meine_pdfs", "meine_fitness_plaene", "meine_notizen"]:
-    if not os.path.exists(ordner):
-        os.makedirs(ordner)
+st.sidebar.title("🎨 Personalisierung")
+bg_color = st.sidebar.color_picker("Wähle deine Dashboard-Farbe", "#1E1E1E")
+text_color = st.sidebar.color_picker("Wähle deine Text-Farbe", "#FFFFFF")
+app_mode = st.sidebar.selectbox("Modus wechseln", ["📚 Lernen & Schule", "💪 Fitness & Ernährung"])
 
-# =========================================================================
-# 2. ACCURATE STATE ENGINE (Permanentes System-Gedächtnis)
-# =========================================================================
-if "gewicht" not in st.session_state:
-    st.session_state.gewicht = 70
-if "groesse" not in st.session_state:
-    st.session_state.groesse = 175
-if "alter" not in st.session_state:
-    st.session_state.alter = 16
-if "klassenstufe" not in st.session_state:
-    st.session_state.klassenstufe = "10. Klasse"
-if "custom_color" not in st.session_state:
-    st.session_state.custom_color = "#1e1e1e"
+# CSS für dynamische Farben anwenden
+st.markdown(f"""
+    <style>
+    .stApp {{ background-color: {bg_color}; color: {text_color}; }}
+    </style>
+    """, unsafe_allow_html=True)
 
-# Live Echtzeit-Nährstoff- und Aktivitäts-Tracker
-if "live_wasser" not in st.session_state:
-    st.session_state.live_wasser = 0
-if "live_protein" not in st.session_state:
-    st.session_state.live_protein = 0
-if "live_schritte" not in st.session_state:
-    st.session_state.live_schritte = 0
-if "live_verbrannte_kalorien" not in st.session_state:
-    st.session_state.live_verbrannte_kalorien = 0
+# Hilfsfunktion für echte KI-Abfragen
+def get_ai_response(prompt_text):
+    if not openai_api_key:
+        return "Bitte gib zuerst deinen OpenAI API-Key in der linken Seitenleiste ein, um diese Funktion zu nutzen!"
+    try:
+        client = OpenAI(api_key=openai_api_key)
+        response = client.chat.completions.create(
+            model="gpt-4o-mini", # Schnelles und günstiges Modell
+            messages=[{"role": "user", "content": prompt_text}]
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Fehler bei der KI-Abfrage: {str(e)}"
 
-# Streaks & Zeitstempel-Historie (Anti-Cheat)
-if "fit_streak" not in st.session_state:
-    st.session_state.fit_streak = 3
-if "last_fit_log" not in st.session_state:
-    st.session_state.last_fit_log = datetime.date.today()
-if "last_video_upload" not in st.session_state:
-    st.session_state.last_video_upload = datetime.date.today()
+# --- AUTOMATISCHER STREAK-RESET NACH INAKTIVITÄT ---
+days_passed = (datetime.date.today() - st.session_state.last_activity).days
+if days_passed >= 2:
+    st.session_state.streak_fitness = 0
+    st.session_state.streak_lernen = 0
+    st.sidebar.warning("Deine Tracker wurden wegen 2 Tagen Inaktivität zurückgesetzt!")
 
-if "lern_streak" not in st.session_state:
-    st.session_state.lern_streak = 1
-if "last_lern_log" not in st.session_state:
-    st.session_state.last_lern_log = datetime.date.today()
-if "gelöste_aufgaben" not in st.session_state:
-    st.session_state.gelöste_aufgaben = 2
+if st.sidebar.button("🔴 Tracker manuell zurücksetzen"):
+    st.session_state.streak_fitness = 0
+    st.session_state.streak_lernen = 0
+    st.rerun()
 
-# Gedächtnis-Datenbank für KI-Berichte
-if "ki_fitness_gedaechtnis" not in st.session_state:
-    st.session_state.ki_fitness_gedaechtnis = []
-if "ki_lern_gedaechtnis" not in st.session_state:
-    st.session_state.ki_lern_gedaechtnis = []
-if "chat_history_fitness" not in st.session_state:
-    st.session_state.chat_history_fitness = []
-if "chat_history_lernen" not in st.session_state:
-    st.session_state.chat_history_lernen = []
 
-# Erweiterte Dashboard-Zusatzdaten
-if "supplements" not in st.session_state:
-    st.session_state.supplements = {"Kreatin": False, "Omega 3": False, "Zink/Magnesium": False}
-if "stundenplan" not in st.session_state:
-    st.session_state.stundenplan = {"Montag": "", "Dienstag": "", "Mittwoch": "", "Donnerstag": "", "Freitag": ""}
-
-# =========================================================================
-# 3. CRON-LOGIK: AUTOMATISCHER VERFALL BEI INAKTIVITÄT
-# =========================================================================
-heute = datetime.date.today()
-if (heute - st.session_state.last_fit_log).days >= 2:
-    st.session_state.fit_streak = 0
-    st.sidebar.error("⚠️ Inaktivität im Sport! Dein Fitness-Streak wurde auf 0 gesetzt.")
-if (heute - st.session_state.last_lern_log).days >= 2:
-    st.session_state.lern_streak = 0
-    st.sidebar.error("⚠️ Inaktivität in der Schule! Dein Lern-Streak wurde auf 0 gesetzt.")
-
-# =========================================================================
-# 4. SIDEBAR: CONTROL CENTER & MATRIX FARBSTUDIO
-# =========================================================================
-with st.sidebar:
-    st.title("📲 iPad Control Center")
-    st.markdown("Wähle dein aktives Premium-Modul aus:")
-    modus = st.selectbox(
-        "App auswählen:", 
-        ["🏋️‍♂️ ATHLETE PRO", "🎓 CAMPUS EXPERT", "🏆 MEILENSTEINE & POKALE", "🌆 KI-ABEND-REPORT"]
-    )
+# =====================================================================
+# MODUS 1: LERNEN & SCHULE
+# =====================================================================
+if app_mode == "📚 Lernen & Schule":
+    st.title("📚 AI Lern-Zentrum")
     
-    st.divider()
-    st.markdown("### ⚙️ Profil-Einstellungen")
-    if modus in ["🏋️‍♂️ ATHLETE PRO", "🏆 MEILENSTEINE & POKALE", "🌆 KI-ABEND-REPORT"]:
-        st.session_state.alter = st.number_input("Alter", value=st.session_state.alter, min_value=1, max_value=120)
-        st.session_state.gewicht = st.number_input("Gewicht (kg)", value=st.session_state.gewicht, min_value=1, max_value=300)
-        st.session_state.groesse = st.number_input("Größe (cm)", value=st.session_state.groesse, min_value=50, max_value=250)
-    else:
-        st.session_state.klassenstufe = st.selectbox("Klassenstufe:", [f"{i}. Klasse" for i in range(5, 13)], index=5)
+    klassenstufe = st.selectbox("Klassenstufe wählen", [f"Klasse {i}" for i in range(1, 13)])
+    st.info(f"Modus aktiv für: {klassenstufe}")
+    
+    st.subheader("📝 KI-Lernunterlagen erstellen")
+    themen_input = st.text_input("Gib dein Thema ein (z.B. 'Fotosynthese')")
+    erstellungs_typ = st.radio("Was soll die AI erstellen?", ["Lernzettel", "Quiz", "Probearbeit"])
+    
+    if st.button("Generieren"):
+        with st.spinner("KI generiert deine Unterlagen..."):
+            prompt = f"Erstelle einen ausführlichen {erstellungs_typ} zum Thema '{themen_input}' für die {klassenstufe} in der Schule. Strukturiere es übersichtlich mit Überschriften."
+            antwort = get_ai_response(prompt)
+            st.write(antwort)
+
+    st.write("---")
+    st.subheader("⏳ Lern-Tracker")
+    st.write(f"🔥 Aktueller Lern-Streak: **{st.session_state.streak_lernen}**")
+    
+    video_file_learn = st.file_uploader("Lade ein 5-Minuten-Lernvideo hoch", type=["mp4", "mov"], key="learn_vid")
+    if video_file_learn is not None:
+        if st.button("Video bestätigen & Tracker +1"):
+            st.session_state.streak_lernen += 1
+            st.session_state.last_activity = datetime.date.today()
+            if st.session_state.streak_lernen == 1:
+                st.session_state.medals.append("🥇 Erster Schritt (Lernen)")
+            st.success("Super! Dein Tracker wurde erhöht.")
+            st.rerun()
+
+
+# =====================================================================
+# MODUS 2: FITNESS & ERNÄHRUNG
+# =====================================================================
+elif app_mode == "💪 Fitness & Ernährung":
+    st.title("💪 AI Fitness & Ernährungs-Coach")
+    
+    col1, col2, col3 = st.columns(3)
+    with col1: alter = st.number_input("Alter", min_value=10, max_value=100, value=16)
+    with col2: groesse = st.number_input("Größe (in cm)", min_value=100, max_value=250, value=170)
+    with col3: gewicht = st.number_input("Gewicht (in kg)", min_value=30, max_value=200, value=65)
+    
+    # Nährstoffberechnung
+    grundumsatz = int(10 * gewicht + 6.25 * groesse - 5 * alter + 5) 
+    protein = int(gewicht * 1.5)
+    kohlenhydrate = int(grundumsatz * 0.5 / 4)
+    fett = int(grundumsatz * 0.3 / 9)
+    
+    st.markdown(f"""
+    > 📊 **Dein berechneter täglicher Bedarf:**
+    > * **Kalorien:** ca. {grundumsatz} kcal | **Eiweiß:** {protein}g | **Kohlenhydrate:** {kohlenhydrate}g | **Fett:** {fett}g
+    """)
+    
+    st.write("---")
+    st.subheader("🍎 Ernährungs-Tracker")
+    
+    with st.form(key='food_form', clear_on_submit=True):
+        speise = st.text_input("Was hast du gegessen/getrunken?")
+        submit_food = st.form_submit_button("Hinzufügen")
         
-    st.divider()
-    st.markdown("### 🎨 100+ Farbstudio (RGB Matrix Mixer)")
-    farb_modus = st.radio("Farbwahl-Methode:", ["🎛️ RGB Mixer", "📌 Beliebte Presets"])
-    
-    r_val, g_val, b_val = 30, 30, 30
-    if farb_modus == "🎛️ RGB Mixer":
-        r_val = st.slider("🔴 Rotkanal", 0, 255, 30)
-        g_val = st.slider("🟢 Grünkanal", 0, 255, 30)
-        b_val = st.slider("🔵 Blaukanal", 0, 255, 30)
-        st.session_state.custom_color = f"rgb({r_val}, {g_val}, {b_val})"
-    else:
-        presets = {
-            "⚪ Modernes Grau": "#1e1e1e", 
-            "⚫ Deep Black": "#000000", 
-            "🧪 Neon Grün": "#39ff14", 
-            "🔮 Neon Violett": "#9d00ff", 
-            "🛍️ Neon Pink": "#ff1493", 
-            "☀️ Helles Weiss": "#f5f5f5", 
-            "💛 Helles Gelb": "#fff9a6"
-        }
-        wahl = st.selectbox("Preset auswählen:", list(presets.keys()))
-        st.session_state.custom_color = presets[wahl]
-        if wahl in ["☀️ Helles Weiss", "💛 Helles Gelb"]:
-            r_val, g_val, b_val = 245, 245, 245
+        if submit_food and speise:
+            st.session_state.consumed_food.append(speise)
+            st.toast(f"'{speise}' wurde gespeichert!")
 
-# --- INTELLIGENTE SCHRIFTKONTRAST-LOGIK (VERHINDERT FEHLERHAFTE SCHRIFTFARBEN) ---
-luminanz = (r_val * 299 + g_val * 587 + b_val * 114) / 1000
-schrift_farbe = "#000000" if luminanz > 1
+    if st.session_state.consumed_food:
+        st.write("**Von der KI gemerkte Mahlzeiten heute:**")
+        for item in st.session_state.consumed_food:
+            st.write(f"• {item}")
+            
+    st.write("---")
+    st.subheader("🏃‍♂️ Sport & Kalorien")
+    sportart = st.text_input("Welche Sportart hast du gemacht?")
+    dauer = st.number_input("Dauer (in Minuten)", min_value=1, value=30)
+    
+    if st.button("Kalorien berechnen"):
+        with st.spinner("KI berechnet..."):
+            prompt = f"Ein {alter} Jahre alter Mensch ({groesse}cm, {gewicht}kg) hat {dauer} Minuten lang folgende Sportart gemacht: {sportart}. Schätze kurz und präzise, wie viele Kalorien dabei verbrannt wurden."
+            antwort = get_ai_response(prompt)
+            st.info(antwort)
+
+    st.write("---")
+    st.subheader("⏳ Fitness-Tracker")
+    st.write(f"🔥 Aktueller Fitness-Streak: **{st.session_state.streak_fitness}**")
+    
+    video_file_fit = st.file_uploader("Lade ein 5-Minuten-Workout-Video hoch", type=["mp4", "mov"], key="fit_vid")
+    if video_file_fit is not None:
+        if st.button("Workout bestätigen & Tracker +1"):
+            st.session_state.streak_fitness += 1
+            st.session_state.last_activity = datetime.date.today()
+            if st.session_state.streak_fitness == 1:
+                st.session_state.medals.append("🏅 Erste Trainingseinheit")
+            st.success("Stark! Dein Fitness-Tracker ist gestiegen.")
+            st.rerun()
+
+
+# =====================================================================
+# ALLGEMEINER CHATBOT (Nutzt jetzt die echte OpenAI API)
+# =====================================================================
+st.write("---")
+st.subheader("💬 Dein All-in-One AI Chatbot")
+
+user_message = st.chat_input("Frag mich etwas...")
+if user_message:
+    st.session_state.chat_history.append(("Du", user_message))
+    
+    with st.spinner("KI tippt..."):
+        # Kontext-Prompt je nach Modus
+        if app_mode == "📚 Lernen & Schule":
+            system_context = f"Du bist ein hilfreicher Lern-Bot für die {klassenstufe}. Beantworte diese Frage kurz und verständlich: {user_message}"
+        else:
+            system_context = f"Du bist ein Fitness- und Ernährungscoach. Der Nutzer ist {alter} Jahre alt, {groesse}cm groß und wiegt {gewicht}kg. Beantworte diese Frage: {user_message}"
+            
+        ai_response = get_ai_response(system_context)
+        st.session_state.chat_history.append(("AI", ai_response))
+
+for rolle, text in st.session_state.chat_history[-6:]:
+    with st.chat_message("user" if rolle == "Du" else "assistant"):
+        st.write(f"**{rolle}:** {text}")
+
+
+# =====================================================================
+# BELOHNUNGSSYSTEM (MEDAILLEN)
+# =====================================================================
+st.sidebar.write("---")
+st.sidebar.title("🏆 Deine Medaillen")
+if st.session_state.medals:
+    for medal in set(st.session_state.medals):
+        st.sidebar.write(medal)
+else:
+    st.sidebar.write("Noch keine Medaillen. Leg los! 🚀")
