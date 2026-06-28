@@ -58,27 +58,27 @@ bg_color = st.sidebar.color_picker("Dashboard-Farbe", "#121212")
 text_color = st.sidebar.color_picker("Text-Farbe", "#FFFFFF")
 accent_color = "#2ECC71" 
 
-# CSS für moderne Schriften und Kacheln (Fehlerfrei escaped durch Verzicht auf f-String Konflikte)
-st.markdown("""
+# Sichere CSS-Generierung ohne f-String-Konflikte mit geschweiften Klammern
+css_template = """
     <style>
-    html, body, [data-testid="stSidebar"], .stApp {
+    html, body, [data-testid="stSidebar"], .stApp {{
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-        background-color: """ + bg_color + """ !important;
-        color: """ + text_color + """ !important;
-    }
-    h1, h2, h3, h4, h5, h6 {
+        background-color: {BG} !important;
+        color: {TXT} !important;
+    }}
+    h1, h2, h3, h4, h5, h6 {{
         font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif !important;
-        color: """ + text_color + """ !important;
+        color: {TXT} !important;
         font-weight: 700;
-    }
-    .stat-box {
+    }}
+    .stat-box {{
         background-color: rgba(255, 255, 255, 0.05);
         padding: 20px;
         border-radius: 10px;
-        border-left: 5px solid """ + accent_color + """;
+        border-left: 5px solid {ACC};
         margin-bottom: 15px;
-    }
-    .medal-card {
+    }}
+    .medal-card {{
         background-color: rgba(255, 215, 0, 0.1);
         padding: 15px;
         border-radius: 8px;
@@ -86,9 +86,10 @@ st.markdown("""
         margin: 10px 0px;
         font-size: 1.1rem;
         font-weight: bold;
-    }
+    }}
     </style>
-    """, unsafe_allow_html=True)
+"""
+st.markdown(css_template.format(BG=bg_color, TXT=text_color, ACC=accent_color), unsafe_allow_html=True)
 
 # Hilfsfunktion für echte KI-Abfragen
 def get_ai_response(prompt_text):
@@ -142,15 +143,15 @@ if app_mode == "📚 Lernen & Schule":
             time.sleep(random.uniform(1.2, 2.2))
             
             clean_topic = themen_input.strip().title()
+            kl_stufe = st.session_state.klassenstufe
             
             if erstellungs_typ == "Lernzettel":
-                # Optimierte strukturierte Vorlage kombiniert mit KI-Prompt-Inhalten
-                prompt_details = f"Erstelle stichpunktartig wichtige Fakten und Stolpersteine für das Thema '{clean_topic}' angepasst an eine {st.session_state.klassenstufe}. Halte es übersichtlich."
+                prompt_details = f"Erstelle stichpunktartig wichtige Fakten, Kernkonzepte und typische Stolpersteine für das Thema '{clean_topic}' angepasst an eine {kl_stufe}. Halte es übersichtlich und knackig."
                 ki_fakten = get_ai_response(prompt_details)
                 
                 antwort = f"""
 # 📝 Professioneller Lernzettel: {clean_topic}
-*Optimiert für dein Niveau: {st.session_state.klassenstufe}*
+*Optimiert für dein Niveau: {kl_stufe}*
 
 ---
 ### 🔍 Overview & Kernkonzept
@@ -166,12 +167,12 @@ Stell dir {clean_topic} wie ein wichtiges Zahnrad vor: Fällt dieser Baustein we
 > "Erkläre dieses Blatt heute Abend kurz jemandem aus deiner Familie in deinen eigenen Worten. Wenn du das schaffst, sitzt der Stoff bombensicher für eine 1!"
 """
             else:
-                prompt_quiz = f"Erstelle ein interaktives Quiz mit 3 Fragen und kurzen Antwortmöglichkeiten zum Thema '{clean_topic}' für die {st.session_state.klassenstufe}."
+                prompt_quiz = f"Erstelle ein interaktives Quiz mit 3 gezielten Fragen und kurzen Antwortmöglichkeiten zum Thema '{clean_topic}' für die {kl_stufe}."
                 ki_quiz = get_ai_response(prompt_quiz)
                 
                 antwort = f"""
 # 🧪 Interaktives KI-Quiz: {clean_topic}
-*Niveau: {st.session_state.klassenstufe}*
+*Niveau: {kl_stufe}*
 
 Fordere dein Gehirn heraus. Kannst du diese Fragen fehlerfrei beantworten?
 
@@ -183,7 +184,10 @@ Fordere dein Gehirn heraus. Kannst du diese Fragen fehlerfrei beantworten?
 
     st.write("---")
     st.subheader("⏳ Lern-Tracker")
-    st.markdown(f'<div class="stat-box">🔥 Aktueller Lern-Streak: <b>{st.session_state.streak_lernen} Tage</b></div>', unsafe_allow_html=True)
+    
+    # Sicher generiertes HTML ohne Inline-f-String Anführungszeichen-Konflikte
+    lern_streak_aktuell = str(st.session_state.streak_lernen)
+    st.markdown('<div class="stat-box">🔥 Aktueller Lern-Streak: <b>' + lern_streak_aktuell + ' Tage</b></div>', unsafe_allow_html=True)
     
     video_file_learn = st.file_uploader("Lade ein 5-Minuten-Lernvideo hoch", type=["mp4", "mov"], key="learn_vid")
     if video_file_learn is not None:
@@ -217,4 +221,80 @@ elif app_mode == "💪 Fitness & Ernährung":
     if input_alter != st.session_state.alter or input_groesse != st.session_state.groesse or input_gewicht != st.session_state.gewicht:
         st.session_state.alter = input_alter
         st.session_state.groesse = input_groesse
-        st.session_state.
+        st.session_state.gewicht = input_gewicht
+        st.rerun()
+    
+    # Nährstoffberechnung
+    grundumsatz = int(10 * st.session_state.gewicht + 6.25 * st.session_state.groesse - 5 * st.session_state.alter + 5) 
+    protein = int(st.session_state.gewicht * 1.5)
+    kohlenhydrate = int(grundumsatz * 0.5 / 4)
+    fett = int(grundumsatz * 0.3 / 9)
+    
+    st.markdown(f"""
+    <div class='stat-box'>
+        <h4>📊 Dein berechneter täglicher Bedarf:</h4>
+        <p>• <b>Kalorien:</b> ca. {grundumsatz} kcal</p>
+        <p>• <b>Eiweiß (Proteine):</b> {protein}g</p>
+        <p>• <b>Kohlenhydrate:</b> {kohlenhydrate}g</p>
+        <p>• <b>Fett:</b> {fett}g</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    st.write("---")
+    st.subheader("🍎 Ernährungs-Tracker mit AI-Feedback")
+    
+    with st.form(key='food_form', clear_on_submit=True):
+        speise = st.text_input("Was hast du gegessen/getrunken?")
+        submit_food = st.form_submit_button("Hinzufügen & KI-Feedback erhalten")
+        
+        if submit_food and speise:
+            st.session_state.consumed_food.append(speise)
+            
+            # Sofortiges Feedback von der KI
+            feedback_prompt = f"Der Nutzer ({st.session_state.alter} Jahre, {st.session_state.groesse}cm, {st.session_state.gewicht}kg) hat gerade folgendes Lebensmittel eingetragen: '{speise}'. Lobe oder kritisiere diese Wahl kurz und knackig (maximal 3 Sätze) basierend auf Fitness und Gesundheit."
+            st.session_state["last_food_feedback"] = get_ai_response(feedback_prompt)
+            st.rerun()
+
+    if "last_food_feedback" in st.session_state:
+        st.info(f"💬 **KI-Feedback zu deiner Mahlzeit:**\n\n{st.session_state['last_food_feedback']}")
+
+    if st.session_state.consumed_food:
+        st.write("**Bisherige Mahlzeiten heute:**")
+        for item in st.session_state.consumed_food:
+            st.write(f"• {item}")
+            
+    st.write("---")
+    st.subheader("🏃‍♂️ Sport & Kalorien")
+    sportart = st.text_input("Welche Sportart hast du gemacht?")
+    dauer = st.number_input("Dauer (in Minuten)", min_value=1, value=30)
+    
+    if st.button("Kalorien berechnen"):
+        with st.spinner("KI berechnet..."):
+            prompt = f"Ein {st.session_state.alter} Jahre alter Mensch ({st.session_state.groesse}cm, {st.session_state.gewicht}kg) hat {dauer} Minuten lang folgende Sportart gemacht: {sportart}. Schätze kurz und präzise, wie viele Kalorien dabei verbrannt wurden."
+            antwort = get_ai_response(prompt)
+            st.info(antwort)
+
+    st.write("---")
+    st.subheader("⏳ Fitness-Tracker")
+    
+    fit_streak_aktuell = str(st.session_state.streak_fitness)
+    st.markdown('<div class="stat-box">🔥 Aktueller Fitness-Streak: <b>' + fit_streak_aktuell + ' Tage</b></div>', unsafe_allow_html=True)
+    
+    video_file_fit = st.file_uploader("Lade ein 5-Minuten-Workout-Video hoch", type=["mp4", "mov"], key="fit_vid")
+    if video_file_fit is not None:
+        if st.button("Workout bestätigen & Tracker +1"):
+            st.session_state.streak_fitness += 1
+            st.session_state.last_activity = datetime.date.today()
+            
+            if st.session_state.streak_fitness == 1:
+                st.session_state.medals.append("🏅 Erste Trainingseinheit - Aller Anfang ist gemacht!")
+            if st.session_state.streak_fitness == 5:
+                st.session_state.medals.append("⚡ Fitness-Champ - 5 Workouts eingereicht!")
+                
+            st.success("Stark! Dein Fitness-Tracker ist gestiegen.")
+            st.rerun()
+
+
+# =====================================================================
+# MODUS 3: EIGENER AUSWÄHLPUNKT FÜR MEDAILLEN
+# =====================================================================
